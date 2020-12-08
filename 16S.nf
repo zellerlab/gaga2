@@ -48,18 +48,24 @@ process run_trimming {
 	// dada2's dependencies are not right
 	//conda "python>=3.7 conda-forge::gcc r-essentials r-base bioconda::bioconductor-dada2 conda-forge::r-rcpp"
 	//conda "r-essentials r-base bioconda::bioconductor-dada2 conda-forge::r-rcpp"
+	publishDir "${params.output_dir}/qc"
 	input:
 	//set sampleId, file(reads), file(trim_params) from run_trimming_input_ch
 	file(trim_params) from run_figaro_all_output_ch
-	set sampleId, file(reads) from run_trimming_input_ch
+	//set sampleId, file(reads) from run_trimming_input_ch
+	run_figaro_all_output_ch.collect()
 
 	output:
 	stdout run_trimming_stdout
+	file("read_quality.pdf")
 
 	script:
 	"""
-	python ${params.scripts}/trim_params.py $trim_params ${reads[0]}
+	module load R/3.5.0-foss-2017b-X11-20171023
+	Rscript --vanilla ${params.scripts}/dada2_qc.R ${params.input_dir}
 	"""
+	//python ${params.scripts}/trim_params.py $trim_params ${reads[0]}
+
 
 }
 
