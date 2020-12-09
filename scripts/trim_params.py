@@ -6,17 +6,23 @@ import gzip
 def main():
 	ap = argparse.ArgumentParser()
 	ap.add_argument("trim_params", type=str)
-	ap.add_argument("reads", type=str)
+	#ap.add_argument("reads", type=str)
 	args = ap.parse_args()
 
 	d = json.load(open(args.trim_params))
 
 	"/g/scb/bork/schudoma/16S/testrun/input2/SRR5906274/SRR5906274_1.fastq.gz"
-	fopen = gzip.open if args.reads.endswith(".gz") else open
-	with fopen(args.reads, "rt") as reads_in:
-		seq = [next(reads_in) for i in range(2)][1]
+	#try:
+	#	reads_in = gzip.open(args.reads, "rt")
+	#except:
+	#	reads_in = open(args.reads, "rt")
+	#fopen = gzip.open if args.reads.endswith(".gz") else open
+	#with fopen(args.reads, "rt") as reads_in:
+	#with reads_in:
+	#	seq = [next(reads_in) for i in range(2)][1]
 
-	print(*d[0]["trimPosition"], len(seq), sep="\t")
+	# print(*d[0]["trimPosition"], len(seq), sep="\t")
+	print(*d[0]["trimPosition"]) #, sep="\t")
 	
 
 	"""
