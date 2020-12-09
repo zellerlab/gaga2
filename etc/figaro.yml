@@ -1,0 +1,8 @@
+name: figaro_env
+channels:
+  - anaconda
+  - defaults
+dependencies:
+  - numpy
+  - scipy
+  - matplotlib
