@@ -1,14 +1,57 @@
 #!/usr/bin/env nextflow
 
+/*
 params.figaro = "/home/schudoma/gaga2_test/gaga2/figaro/figaro.py"
 params.scripts = "/home/schudoma/gaga2_test/gaga2/scripts"
 params.envs = "/home/schudoma/gaga2_test/gaga2/etc"
+params.output_dir = "/home/schudoma/gaga2_test/output"
+*/
+/*
+Test params for Bullman 2017
 params.amplicon_length = 465
 params.forward_primer = 21
 params.reverse_primer = 17
 params.min_overlap = 20
+*/
 
-params.output_dir = "/home/schudoma/gaga2_test/output"
+
+def helpMessage() {
+	log.info """
+	
+	This is the gaga2 (figaro/dada2) 16S amplicon sequencing processing pipeline of the Zeller lab @ EMBL.
+
+	Usage:
+
+	The typical command for running the pipeline is as follows:
+
+        nextflow run gaga2.nf -c <config_file> --input_dir </path/to/input_dir> --output_dir </path/to/output_dir> ...
+
+    Mandatory arguments:
+
+            --input_dir               path to input read files (needs to be absolute, 1 subdirectory per sample)
+                                      reads need to be Illumina paired end amplicon seq (e.g. MiSeq)
+            --output_dir              path to output directory (absolute)
+            --amplicon_length         expected amplicon length
+            --left_primer             length of left primer
+            --right_primer            length of right primer
+
+    Optional arguments:
+
+            --min_overlap             Minimum read pair overlap [bp] (default=20)
+            --help                    Show this help.
+
+	""".stripIndent()
+}
+
+if (params.help) {
+	helpMessage()
+	exit 0
+}
+
+if ( !params.min_overlap ) {
+	params.min_overlap = 20
+}
+
 
 Channel
 	.fromFilePairs(params.input_dir + "/*/*_*[12].{fastq,fq,fastq.gz,fq.gz}")
