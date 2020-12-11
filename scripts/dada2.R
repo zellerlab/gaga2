@@ -8,7 +8,10 @@ output_dir = args[2]
 
 length_cut = as.numeric(c(args[3], args[4]))
 print(length_cut)
-exp_err = as.numeric(c(2,2)) # get from cargs!
+if (length_cut[1] == -1 || length_cut[2] == -1) {
+	length_cut = 0
+}
+exp_err = as.numeric(c(2,2)) # get from cargs? apparently not.
 
 list.files(input_dir)
 sample_ids = basename(list.files(input_dir))
@@ -33,11 +36,11 @@ r2_filtered = file.path(output_dir, "filtered", basename(r2_raw))
 print(r1_filtered)
 print(r2_filtered)
 
+
 out = filterAndTrim(r1_raw, r1_filtered, r2_raw, r2_filtered, truncLen=length_cut,
                     maxN=0, maxEE=exp_err, truncQ=2, rm.phix=TRUE,
                     compress=TRUE, multithread=TRUE)
-#TODO: capture this!
-head(out)
+write.table(out, file="filter_trim_table.tsv", sep="\t")
 
 # update read files
 keep = file.exists(r1_filtered) & file.exists(r2_filtered) & out[,"reads.out"] > 100
@@ -87,5 +90,6 @@ track = cbind(out[keep,], sapply(r1_dada, getN), sapply(r2_dada, getN), sapply(m
 colnames(track) = c("input", "filtered", "denoisedF", "denoisedR", "merged", "nonchim")
 rownames(track) = sample_ids
 head(track)
+write.table(track, file = "summary_table.tsv", sep="\t")
 
 save(seqtab, seqtab.nochim, r1_error, r2_error, track, file = "result.RData")

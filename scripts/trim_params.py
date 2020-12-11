@@ -9,9 +9,13 @@ def main():
 	#ap.add_argument("reads", type=str)
 	args = ap.parse_args()
 
-	d = json.load(open(args.trim_params))
+	# {'trimPosition': [285, 238], 'maxExpectedError': [4, 4], 'readRetentionPercent': 74.95, 'score': 56.95061011040093}
+	try:
+		d = json.load(open(args.trim_params))
+		print(*d[0]["trimPosition"])
+	except:
+		print("-1 -1")
 
-	"/g/scb/bork/schudoma/16S/testrun/input2/SRR5906274/SRR5906274_1.fastq.gz"
 	#try:
 	#	reads_in = gzip.open(args.reads, "rt")
 	#except:
@@ -20,20 +24,8 @@ def main():
 	#with fopen(args.reads, "rt") as reads_in:
 	#with reads_in:
 	#	seq = [next(reads_in) for i in range(2)][1]
-
 	# print(*d[0]["trimPosition"], len(seq), sep="\t")
-	print(*d[0]["trimPosition"]) #, sep="\t")
-	
 
-	"""
-	>>> import json
-	>>> d=json.load(open("/g/scb/bork/schudoma/16S/work/db/62cf129e55a61dd6b11e32d9c27e76/figaro_out/trimParameters.json"))
-	>>> type(d)
-	<class 'list'>
-	>>> d[0]
-	{'trimPosition': [285, 238], 'maxExpectedError': [4, 4], 'readRetentionPercent': 74.95, 'score': 56.95061011040093}
-	>>>
-	"""
 
 if __name__ == "__main__":
 	main()

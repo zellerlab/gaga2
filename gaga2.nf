@@ -1,13 +1,14 @@
 #!/usr/bin/env nextflow
 
-params.figaro = "/g/scb/bork/schudoma/16S/figaro/figaro.py"
-params.scripts = "/g/scb/bork/schudoma/16S/scripts"
+params.figaro = "/home/schudoma/gaga2_test/gaga2/figaro/figaro.py"
+params.scripts = "/home/schudoma/gaga2_test/gaga2/scripts"
+params.envs = "/home/schudoma/gaga2_test/gaga2/etc"
 params.amplicon_length = 465
 params.forward_primer = 21
 params.reverse_primer = 17
 params.min_overlap = 20
 
-params.output_dir = "output"
+params.output_dir = "/home/schudoma/gaga2_test/output"
 
 Channel
 	.fromFilePairs(params.input_dir + "/*/*_*[12].{fastq,fq,fastq.gz,fq.gz}")
@@ -18,8 +19,8 @@ samples_ch.into { run_figaro_input_ch; run_dada2_input_ch; }
 
 process run_figaro_all {
 	//conda "anaconda::numpy anaconda::scipy anaconda::matplotlib"
-	conda "anaconda::numpy>=1.13.1 anaconda::scipy>=1.2.1 anaconda::matplotlib>=3.0.2"
-	//conda "etc/figaro.yml"
+	//	conda "anaconda::numpy>=1.13.1 anaconda::scipy>=1.2.1 anaconda::matplotlib>=3.0.2"
+	conda "${params.envs}/figaro.yml"
 	publishDir "${params.output_dir}/figaro"
 
 	input:
@@ -33,8 +34,17 @@ process run_figaro_all {
 
 	shell:
 	"""
+	which python
+	python ${params.scripts}/check_readsets.py ${params.input_dir} ${params.output_dir}
 	python ${params.scripts}/gather_fastq_files.py ${params.input_dir} figaro_in
+	if [[ ! -f ${params.output_dir}/SKIP_FIGARO ]]; then
 	python ${params.figaro} -i figaro_in -o figaro_out -a ${params.amplicon_length} -f ${params.forward_primer} -r ${params.reverse_primer} -m ${params.min_overlap}
+	fi
+
+	mkdir -p figaro_out
+	touch figaro_out/forwardExpectedError.png
+	touch figaro_out/reverseExpectedError.png
+	touch figaro_out/trimParameters.json
 	"""
 }
 
@@ -43,7 +53,7 @@ process run_dada2 {
 	// dada2's dependencies are not right
 	//conda "python>=3.7 conda-forge::gcc r-essentials r-base bioconda::bioconductor-dada2 conda-forge::r-rcpp"
 	//conda "r-essentials r-base bioconda::bioconductor-dada2 conda-forge::r-rcpp"
-	publishDir "${params.output_dir}/qc"
+	publishDir "${params.output_dir}/dada2"
 	input:
 	file(trim_params) from run_figaro_all_output_ch
 	run_dada2_input_ch.collect()
@@ -51,14 +61,17 @@ process run_dada2 {
 	output:
 	stdout run_dada2_stdout
 	file("read_quality.pdf")
-
+	file("filter_trim_table.tsv")
+	file("error_model.pdf")
+	file("summary_table.tsv")
+	file("result.RData")
 	script:
 	"""
 	ls -l
 	tparams=\$(python ${params.scripts}/trim_params.py $trim_params)
 	echo \$tparams
 	module load R/3.5.0-foss-2017b-X11-20171023
-	Rscript --vanilla ${params.scripts}/dada2_qc.R ${params.input_dir} ${params.output_dir} \$tparams
+	Rscript --vanilla ${params.scripts}/dada2.R ${params.input_dir} ${params.output_dir} \$tparams
 	"""
 }
 

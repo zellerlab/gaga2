@@ -16,6 +16,8 @@ def main():
 	args.input_dir = os.path.abspath(args.input_dir)
 	pathlib.Path(args.link_dir).mkdir(parents=True, exist_ok=True)
 
+	print("INPUTDIR", args.input_dir)
+	print(os.listdir(args.input_dir))
 
 	for wd, dirs, files in os.walk(args.input_dir, followlinks=True):
 		print(wd, dirs, files)
