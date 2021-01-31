@@ -1,0 +1,10 @@
+name: gaga2
+channels:
+  - r
+  - bioconda
+  - defaults
+dependencies:
+  - python>=3.7
+  - nextflow>=20
+  - r-base
+  - r-essentials
