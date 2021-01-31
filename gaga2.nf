@@ -38,6 +38,8 @@ def helpMessage() {
     Optional arguments:
 
             --min_overlap             Minimum read pair overlap [bp] (default=20)
+            --nthreads                Number of threads used for dada2 (default=8)
+            -work-dir, -w            Path to working directory
             --help                    Show this help.
 
 	""".stripIndent()
@@ -52,6 +54,11 @@ if ( !params.min_overlap ) {
 	params.min_overlap = 20
 }
 
+//TODO: get the default from config? -> but needs to be provided to dada2 call (is there a way to get "threads" from params?)
+if ( !params.nthreads ) {
+	params.nthreads = 8
+}
+
 
 Channel
 	.fromFilePairs(params.input_dir + "/*/*_*[12].{fastq,fq,fastq.gz,fq.gz}")
@@ -64,7 +71,7 @@ process run_figaro_all {
 	//conda "anaconda::numpy anaconda::scipy anaconda::matplotlib"
 	//	conda "anaconda::numpy>=1.13.1 anaconda::scipy>=1.2.1 anaconda::matplotlib>=3.0.2"
 	conda "${params.envs}/figaro.yml"
-	publishDir "${params.output_dir}/figaro"
+	publishDir "${params.output_dir}/figaro", mode: "link"
 
 	input:
 	run_figaro_input_ch.collect()
@@ -91,33 +98,48 @@ process run_figaro_all {
 	"""
 }
 
+process dada2_preprocess {
+	//conda "r-base r-essentials"
+	publishDir "${params.output_dir}/dada2", mode: "link"
 
-process run_dada2 {
-	// dada2's dependencies are not right
-	//conda "python>=3.7 conda-forge::gcc r-essentials r-base bioconda::bioconductor-dada2 conda-forge::r-rcpp"
-	//conda "r-essentials r-base bioconda::bioconductor-dada2 conda-forge::r-rcpp"
-	publishDir "${params.output_dir}/dada2"
 	input:
 	file(trim_params) from run_figaro_all_output_ch
 	run_dada2_input_ch.collect()
 
 	output:
-	stdout run_dada2_stdout
+	stdout dada2_preprocess_stdout
 	file("read_quality.pdf")
-	file("filter_trim_table.tsv")
-	file("error_model.pdf")
-	file("summary_table.tsv")
-	file("result.RData")
+    file("read_quality_postqc.pdf")
+    file("filter_trim_table.tsv")
+    file("filter_trim_table.final.tsv") into dada2_preprocess_output_ch
+	file("dada2_preprocess.log")
+
 	script:
 	"""
-	ls -l
 	tparams=\$(python ${params.scripts}/trim_params.py $trim_params)
 	echo \$tparams
-	module load R/3.5.0-foss-2017b-X11-20171023
-	Rscript --vanilla ${params.scripts}/dada2.R ${params.input_dir} ${params.output_dir} \$tparams
+	Rscript --vanilla ${params.scripts}/dada2_preprocess.R ${params.input_dir} ${params.output_dir} \$tparams ${params.nthreads} > dada2_preprocess.log
 	"""
 }
 
-run_dada2_stdout.view { it }
+process dada2_analysis {
+	publishDir "${params.output_dir}/dada2", mode: "link"
 
+	input:
+	file(filter_trim_table) from dada2_preprocess_output_ch
 
+	output:
+	file("dada2_analysis.log")
+	file("error_model.pdf")
+	file("summary_table.tsv")
+	file("result.RData")
+	file("dada2_figures.pdf")
+	file("ASVs.tsv")
+	file("asv_table.tsv")
+
+	script:
+	"""
+	Rscript --vanilla ${params.scripts}/dada2_analysis.R ${params.output_dir}/filtered ${params.output_dir} ${filter_trim_table} ${params.nthreads} > dada2_analysis.log
+	"""
+
+}
