@@ -30,6 +30,8 @@ and need to be arranged in a sample-based directory structure:
 `gaga2` will generate an empty sentinel file `<output_dir>/SKIP_FIGARO`.
 This will prevent `Figaro` from executing and should automatically advance to `dada2` processing.
 
+* Samples with less than `110` reads after `dada2` preprocessing, will be discarded.
+
 ### Running gaga2
 The typical command for running `gaga2` is
 
