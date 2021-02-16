@@ -50,4 +50,5 @@ The typical command for running `gaga2` is
 ### internal beta-testing instructions
 * `source /g/scb2/zeller/schudoma/software/wrappers/gaga2_wrapper` **before** submitting job to cluster
 * please report issues/requests/feedback in the github issue tracker 
+* If you want to run `gaga2` on the cluster, `nextflow` alone requires `>4GB memory` just for 'managing'.
 
