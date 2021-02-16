@@ -1,10 +1,10 @@
 name: gaga2
 channels:
-  - r
+  - conda-forge
   - bioconda
   - defaults
 dependencies:
   - python>=3.7
-  - nextflow>=20
-  - r-base
+  - nextflow>=20.10
+  - r-base>=4.0
   - r-essentials
