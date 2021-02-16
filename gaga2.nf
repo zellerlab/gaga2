@@ -70,7 +70,7 @@ samples_ch.into { run_figaro_input_ch; run_dada2_input_ch; }
 process run_figaro_all {
 	//conda "anaconda::numpy anaconda::scipy anaconda::matplotlib"
 	//	conda "anaconda::numpy>=1.13.1 anaconda::scipy>=1.2.1 anaconda::matplotlib>=3.0.2"
-	conda "${params.envs}/figaro.yml"
+	// conda "${params.envs}/figaro.yml"
 	publishDir "${params.output_dir}/figaro", mode: "link"
 
 	input:
@@ -85,10 +85,11 @@ process run_figaro_all {
 	shell:
 	"""
 	which python
+    which figaro
 	python ${params.scripts}/check_readsets.py ${params.input_dir} ${params.output_dir}
 	python ${params.scripts}/gather_fastq_files.py ${params.input_dir} figaro_in
 	if [[ ! -f ${params.output_dir}/SKIP_FIGARO ]]; then
-	python ${params.figaro} -i figaro_in -o figaro_out -a ${params.amplicon_length} -f ${params.forward_primer} -r ${params.reverse_primer} -m ${params.min_overlap}
+	figaro -i figaro_in -o figaro_out -a ${params.amplicon_length} -f ${params.forward_primer} -r ${params.reverse_primer} -m ${params.min_overlap}
 	fi
 
 	mkdir -p figaro_out
