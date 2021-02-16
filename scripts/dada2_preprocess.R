@@ -4,6 +4,7 @@ library("tidyverse")
 library("cowplot")
 
 print("XXX")
+MIN_READ_THRESHOLD = 1000
 
 # handle command line args
 args = commandArgs(trailingOnly=TRUE)
@@ -55,7 +56,6 @@ rownames(out) = str_replace(rownames(out), "_R?[12].(fastq|fq)(.gz)?", "")
 write.table(out, file="filter_trim_table.tsv", sep="\t")
 
 # remove 
-MIN_READ_THRESHOLD = 100
 keep = file.exists(r1_filtered) & file.exists(r2_filtered) & out[,"reads.out"] >= MIN_READ_THRESHOLD
 r1_remove = r1_filtered[!keep] #file.exists(r1_filtered) & out["reads.out"] < MIN_READ_THRESHOLD]
 r2_remove = r2_filtered[!keep] #file.exists(r2_filtered) & out["reads.out"] < MIN_READ_THRESHOLD]
@@ -64,6 +64,9 @@ sapply(r2_remove, file.remove)
 
 out = out[keep,]
 write.table(out, file="filter_trim_table.final.tsv", sep="\t")
+
+r1_filtered = r1_filtered[keep]
+r2_filtered = r2_filtered[keep]
 
 # get the quality profiles post-qc
 x.f = plotQualityProfile(r1_filtered, aggregate = TRUE)
