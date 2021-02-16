@@ -43,7 +43,7 @@ The typical command for running `gaga2` is
 * `amplicon_length`, `left_primer`, and `right_primer` are derived from the experiment parameters 
 
 #### Optional arguments
-* `--min_overlap` of read pairs is 20bp by default
+* `--min_overlap` of read pairs is `20bp` by default
 * `-w, -work-dir` should be set to `<output_dir>/work`, otherwise it will be automatically placed in the current directory.
 
 
