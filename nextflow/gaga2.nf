@@ -53,8 +53,6 @@ samples_ch.into { run_figaro_input_ch; run_dada2_input_ch; }
 
 
 process run_figaro_all {
-	//conda "${params.envs}/figaro.yml"
-	conda "${params.envs}/figaro_env"
 	publishDir "${params.output_dir}/figaro", mode: "link"
 
 	input:
@@ -69,8 +67,9 @@ process run_figaro_all {
 	shell:
 	"""
 	which python
-	python ${params.scripts}/check_readsets.py ${params.input_dir} ${params.output_dir}
-	python ${params.scripts}/gather_fastq_files.py ${params.input_dir} figaro_in
+    which figaro
+	check_readsets ${params.input_dir} ${params.output_dir}
+	gather_fastq_files ${params.input_dir} figaro_in
 	if [[ ! -f ${params.output_dir}/SKIP_FIGARO ]]; then
 	figaro -i figaro_in -o figaro_out -a ${params.amplicon_length} -f ${params.forward_primer} -r ${params.reverse_primer} -m ${params.min_overlap}
 	fi
@@ -99,7 +98,7 @@ process dada2_preprocess {
 
 	script:
 	"""
-	tparams=\$(python ${params.scripts}/trim_params.py $trim_params)
+	tparams=\$(trim_params $trim_params)
 	echo \$tparams
 	dada2_preprocess.R ${params.input_dir} ${params.output_dir} \$tparams ${params.nthreads} > dada2_preprocess.log
 	"""

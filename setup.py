@@ -46,7 +46,7 @@ with open(path.join(here, "DESCRIPTION.md"), encoding="utf-8") as description:
         entry_points={
             "console_scripts": [
                 "check_readsets=gaga2.check_readsets:main",
-                "gather_fastq_files=gaga2gather_fastq_files:main",
+                "gather_fastq_files=gaga2.gather_fastq_files:main",
                 "trim_params=gaga2.trim_params:main"
             ],
         },
