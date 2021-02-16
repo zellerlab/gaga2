@@ -1,4 +1,5 @@
 #!/usr/bin/env Rscript
+
 library("dada2");packageVersion("dada2")
 library("tidyverse")
 library("cowplot")
@@ -55,7 +56,7 @@ rownames(out) = str_replace(rownames(out), "_R?[12].(fastq|fq)(.gz)?", "")
 write.table(out, file="filter_trim_table.tsv", sep="\t")
 
 # remove 
-MIN_READ_THRESHOLD = 100
+MIN_READ_THRESHOLD = 120
 keep = file.exists(r1_filtered) & file.exists(r2_filtered) & out[,"reads.out"] >= MIN_READ_THRESHOLD
 r1_remove = r1_filtered[!keep] #file.exists(r1_filtered) & out["reads.out"] < MIN_READ_THRESHOLD]
 r2_remove = r2_filtered[!keep] #file.exists(r2_filtered) & out["reads.out"] < MIN_READ_THRESHOLD]
