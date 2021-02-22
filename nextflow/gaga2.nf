@@ -71,7 +71,7 @@ process run_figaro_all {
 	check_readsets ${params.input_dir} ${params.output_dir}
 	gather_fastq_files ${params.input_dir} figaro_in
 	if [[ ! -f ${params.output_dir}/SKIP_FIGARO ]]; then
-	figaro -i figaro_in -o figaro_out -a ${params.amplicon_length} -f ${params.forward_primer} -r ${params.reverse_primer} -m ${params.min_overlap}
+	figaro -i figaro_in -o figaro_out -a ${params.amplicon_length} -f ${params.left_primer} -r ${params.right_primer} -m ${params.min_overlap}
 	fi
 
 	mkdir -p figaro_out
