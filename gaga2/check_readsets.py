@@ -12,7 +12,7 @@ def check_readlengths(fn):
 	fopen = gzip.open if fn.endswith(".gz") else open
 	with fopen(fn, "rt") as reads_in:
 		for i, line in enumerate(reads_in):
-			if i % 4 == 0:
+			if i % 4 == 1:
 				lengths.add(len(line.strip()))
 				if len(lengths) > 1:
 					return False
