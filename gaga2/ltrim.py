@@ -6,6 +6,7 @@ import pathlib
 
 from collections import Counter
 
+FASTQ_ENDINGS = (".fq", ".fastq", ".fq.gz", ".fastq.gz")
 
 def find_qdips(quals, phred=33):
     def is_qdip(c, phred=33):
@@ -45,27 +46,39 @@ def main():
     qdips = Counter([-1])
     lengths = set()
     read_files = list()
-    for cwd, dirs, files in os.walk(args.indir):
-        if len(files) == 2:
-            r1, r2 = sorted(os.path.join(cwd, f) for f in files)
-            r1_qdips, len_r1 = analyse_file(r1)
-            r2_qdips, len_r2 = analyse_file(r2)
-            lengths.update((len_r1, len_r2))
-            qdips.update(r1_qdips)
-            qdips.update(r2_qdips)
-            read_files.append((r1, r2))
 
-        
-    pathlib.Path(args.outdir).mkdir(exist_ok=True, parents=True)
-    cutpos = max(c for c in qdips if c <= args.max_pos)
-    # print(qdips, cutpos, lengths)
+    _, _, files = next(os.walk(args.indir))
+    files = iter(sorted(os.path.join(args.indir, f) for f in files))
+    for r1 in files:
+        r2 = next(files)
+        r1_qdips, len_r1 = analyse_file(r1)
+        r2_qdips, len_r2 = analyse_file(r2)
+        qdips.update(r1_qdips)
+        qdips.update(r2_qdips)
+        read_files.append((r1, r2))
+
+    figaro_path = os.path.join(args.outdir, "figaro")
+    dada2_path = os.path.join(args.outdir, "dada2")
+    pathlib.Path(figaro_path).mkdir(exist_ok=True, parents=True)
+    pathlib.Path(dada2_path).mkdir(exist_ok=True, parents=True)
+    print(*sorted(qdips.items()), sep="\n")
+    cutpos = max(c for c, count in qdips.items() if c <= args.max_pos and (count > 1 or c == -1))
+    print(read_files)
     print(f"ltrim: cut at {cutpos}, lengths={lengths}")
     for r1, r2 in read_files:
-        path = os.path.join(args.outdir, os.path.basename(os.path.dirname(r1)))
+        path = os.path.join(dada2_path, os.path.basename(os.path.dirname(r1)))
         pathlib.Path(path).mkdir(exist_ok=True, parents=True)
         trim_file(r1, path, new_start=cutpos + 1)
         trim_file(r2, path, new_start=cutpos + 1)
-     
+        r1_base, r2_base = map(os.path.basename, (r1, r2))
+        try:
+            os.symlink(os.path.join(path, r1_base), os.path.join(figaro_path, r1_base))
+        except:
+            pass
+        try:
+            os.symlink(os.path.join(path, r2_base), os.path.join(figaro_path, r2_base))
+        except:
+            pass
 
 
 if __name__ == "__main__":

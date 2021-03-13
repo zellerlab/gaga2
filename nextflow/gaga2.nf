@@ -69,9 +69,10 @@ process run_figaro_all {
 	which python
     which figaro
 	check_readsets ${params.input_dir} ${params.output_dir}
-	gather_fastq_files ${params.input_dir} figaro_in
+	gather_fastq_files ${params.input_dir} ltrim_in
+    ltrim ltrim_in ${params.output_dir}/ltrim
 	if [[ ! -f ${params.output_dir}/SKIP_FIGARO ]]; then
-	figaro -i figaro_in -o figaro_out -a ${params.amplicon_length} -f ${params.left_primer} -r ${params.right_primer} -m ${params.min_overlap}
+	 figaro -i ${params.output_dir}/ltrim/figaro -o figaro_out -a ${params.amplicon_length} -f ${params.left_primer} -r ${params.right_primer} -m ${params.min_overlap}
 	fi
 
 	mkdir -p figaro_out
@@ -100,7 +101,7 @@ process dada2_preprocess {
 	"""
 	tparams=\$(trim_params $trim_params)
 	echo \$tparams
-	dada2_preprocess.R ${params.input_dir} ${params.output_dir} \$tparams ${params.nthreads} > dada2_preprocess.log
+	dada2_preprocess.R ${params.output_dir}/ltrim/dada2 ${params.output_dir} \$tparams ${params.nthreads} > dada2_preprocess.log
 	"""
 	//Rscript --vanilla ${params.scripts}/dada2_preprocess.R ${params.input_dir} ${params.output_dir} \$tparams ${params.nthreads} > dada2_preprocess.log
 }
