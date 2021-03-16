@@ -1,4 +1,5 @@
 #!/usr/bin/env Rscript
+
 library("dada2");packageVersion("dada2")
 library("tidyverse")
 library("cowplot")
@@ -78,9 +79,12 @@ asv.table = t(seqtab.nochim)
 asvs = tibble(id=paste0('ASV_', seq_len(nrow(asv.table))),
                ASV=rownames(asv.table))
 write_tsv(asvs, 'ASVs.tsv')
+
+saved_rownames = rownames(asv.table)
 rownames(asv.table) = asvs$id
 write.table(asv.table, file = 'asv_table.tsv',
             sep='\t', quote = FALSE, row.names = TRUE, col.names = TRUE)
+rownames(asv.table) = saved_rownames
 
 # relative abundance of the chimeric sequences
 rel_ab_chimeras = 1 - (sum(seqtab.nochim)/sum(seqtab))

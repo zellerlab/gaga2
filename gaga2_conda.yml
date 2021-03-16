@@ -1,13 +1,12 @@
-name: gaga2
+name: gaga2_unified
 channels:
+  - conda-forge
   - bioconda
-  - r
   - defaults
 dependencies:
   - python>=3.7
-  - nextflow>=20
-  - r-base
-  - r-essentials
+  - nextflow>=20.10
+  - bioconductor-dada2
   - numpy
   - scipy
   - matplotlib

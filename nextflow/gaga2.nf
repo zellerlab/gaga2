@@ -1,20 +1,5 @@
 #!/usr/bin/env nextflow
 
-/*
-params.figaro = "/home/schudoma/gaga2_test/gaga2/figaro/figaro.py"
-params.scripts = "/home/schudoma/gaga2_test/gaga2/scripts"
-params.envs = "/home/schudoma/gaga2_test/gaga2/etc"
-params.output_dir = "/home/schudoma/gaga2_test/output"
-*/
-/*
-Test params for Bullman 2017
-params.amplicon_length = 465
-params.forward_primer = 21
-params.reverse_primer = 17
-params.min_overlap = 20
-*/
-
-
 def helpMessage() {
 	log.info """
 	
@@ -39,7 +24,7 @@ def helpMessage() {
 
             --min_overlap             Minimum read pair overlap [bp] (default=20)
             --nthreads                Number of threads used for dada2 (default=8)
-            -work-dir, -w            Path to working directory
+            -work-dir, -w             Path to working directory
             --help                    Show this help.
 
 	""".stripIndent()
@@ -68,10 +53,7 @@ samples_ch.into { run_figaro_input_ch; run_dada2_input_ch; }
 
 
 process run_figaro_all {
-	//conda "anaconda::numpy anaconda::scipy anaconda::matplotlib"
-	//	conda "anaconda::numpy>=1.13.1 anaconda::scipy>=1.2.1 anaconda::matplotlib>=3.0.2"
-	// conda "${params.envs}/figaro.yml"
-	publishDir "${params.output_dir}/figaro", mode: "link"
+	publishDir "${params.output_dir}/figaro", mode: "symlink"
 
 	input:
 	run_figaro_input_ch.collect()
@@ -86,10 +68,11 @@ process run_figaro_all {
 	"""
 	which python
     which figaro
-	python ${params.scripts}/check_readsets.py ${params.input_dir} ${params.output_dir}
-	python ${params.scripts}/gather_fastq_files.py ${params.input_dir} figaro_in
+	check_readsets ${params.input_dir} ${params.output_dir}
+	gather_fastq_files ${params.input_dir} ltrim_in
+    ltrim ltrim_in ${params.output_dir}/ltrim
 	if [[ ! -f ${params.output_dir}/SKIP_FIGARO ]]; then
-	figaro -i figaro_in -o figaro_out -a ${params.amplicon_length} -f ${params.forward_primer} -r ${params.reverse_primer} -m ${params.min_overlap}
+	 figaro -i ${params.output_dir}/ltrim/figaro -o figaro_out -a ${params.amplicon_length} -f ${params.left_primer} -r ${params.right_primer} -m ${params.min_overlap}
 	fi
 
 	mkdir -p figaro_out
@@ -100,8 +83,7 @@ process run_figaro_all {
 }
 
 process dada2_preprocess {
-	//conda "r-base r-essentials"
-	publishDir "${params.output_dir}/dada2", mode: "link"
+	publishDir "${params.output_dir}/dada2", mode: "symlink"
 
 	input:
 	file(trim_params) from run_figaro_all_output_ch
@@ -117,14 +99,15 @@ process dada2_preprocess {
 
 	script:
 	"""
-	tparams=\$(python ${params.scripts}/trim_params.py $trim_params)
+	tparams=\$(trim_params $trim_params)
 	echo \$tparams
-	Rscript --vanilla ${params.scripts}/dada2_preprocess.R ${params.input_dir} ${params.output_dir} \$tparams ${params.nthreads} > dada2_preprocess.log
+	dada2_preprocess.R ${params.output_dir}/ltrim/dada2 ${params.output_dir} \$tparams ${params.nthreads} > dada2_preprocess.log
 	"""
+	//Rscript --vanilla ${params.scripts}/dada2_preprocess.R ${params.input_dir} ${params.output_dir} \$tparams ${params.nthreads} > dada2_preprocess.log
 }
 
 process dada2_analysis {
-	publishDir "${params.output_dir}/dada2", mode: "link"
+	publishDir "${params.output_dir}/dada2", mode: "symlink"
 
 	input:
 	file(filter_trim_table) from dada2_preprocess_output_ch
@@ -140,7 +123,8 @@ process dada2_analysis {
 
 	script:
 	"""
-	Rscript --vanilla ${params.scripts}/dada2_analysis.R ${params.output_dir}/filtered ${params.output_dir} ${filter_trim_table} ${params.nthreads} > dada2_analysis.log
+	dada2_analysis.R ${params.output_dir}/filtered ${params.output_dir} ${filter_trim_table} ${params.nthreads} > dada2_analysis.log
 	"""
+	//Rscript --vanilla ${params.scripts}/dada2_analysis.R ${params.output_dir}/filtered ${params.output_dir} ${filter_trim_table} ${params.nthreads} > dada2_analysis.log
 
 }

@@ -1,10 +1,10 @@
 #!/usr/bin/env Rscript
+
 library("dada2");packageVersion("dada2")
 library("tidyverse")
 library("cowplot")
 
-print("XXX")
-MIN_READ_THRESHOLD = 1000
+MIN_READ_THRESHOLD = 110
 
 # handle command line args
 args = commandArgs(trailingOnly=TRUE)
