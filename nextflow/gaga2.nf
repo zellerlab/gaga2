@@ -53,7 +53,7 @@ samples_ch.into { run_figaro_input_ch; run_dada2_input_ch; }
 
 
 process run_figaro_all {
-	publishDir "${params.output_dir}/figaro", mode: "link"
+	publishDir "${params.output_dir}/figaro", mode: "symlink"
 
 	input:
 	run_figaro_input_ch.collect()
@@ -83,7 +83,7 @@ process run_figaro_all {
 }
 
 process dada2_preprocess {
-	publishDir "${params.output_dir}/dada2", mode: "link"
+	publishDir "${params.output_dir}/dada2", mode: "symlink"
 
 	input:
 	file(trim_params) from run_figaro_all_output_ch
@@ -107,7 +107,7 @@ process dada2_preprocess {
 }
 
 process dada2_analysis {
-	publishDir "${params.output_dir}/dada2", mode: "link"
+	publishDir "${params.output_dir}/dada2", mode: "symlink"
 
 	input:
 	file(filter_trim_table) from dada2_preprocess_output_ch
