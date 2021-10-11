@@ -1,8 +1,9 @@
 BootStrap: docker 
-From: centos:7
-OSVersion: 7
-MirrorURL: http://mirror.centos.org/centos-%{OSVERSION}/%{OSVERSION}/os/$basearch/
-Include: yum wget
+From: continuumio/miniconda3
+#From: centos:7
+#OSVersion: 7
+#MirrorURL: http://mirror.centos.org/centos-%{OSVERSION}/%{OSVERSION}/os/$basearch/
+#Include: yum wget
 
 
 %setup
@@ -19,19 +20,20 @@ Include: yum wget
     ### Install your packages ###
 
     # update yum
-    yum makecache fast && \
-    yum update -y
+    #yum makecache fast && \
+    #yum update -y
 
-    yum -y install git bzip2 wget which sudo vi source zlib-devel xz-devel bzip2-devel
-    yum -y group install "Development Tools"
+    # yum -y install git bzip2 wget which sudo vi source zlib-devel xz-devel bzip2-devel
+    # yum -y group install "Development Tools"
+	apt-get install git bzip2 wget which sudo
 
 
-	wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-    bash Miniconda3-latest-Linux-x86_64.sh -b -p /opt/miniconda
-    # echo "PATH=/opt/miniconda/bin:\$PATH" >> /root/.bashrc
-    # echo "export PATH" >> /root/.bashrc
-    rm Miniconda3-latest-Linux-x86_64.sh
-    # source /root/.bashrc
+	#wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    #bash Miniconda3-latest-Linux-x86_64.sh -b -p /opt/miniconda
+    #echo "PATH=/opt/miniconda/bin:\$PATH" >> /root/.bashrc
+    #echo "export PATH" >> /root/.bashrc
+    #rm Miniconda3-latest-Linux-x86_64.sh
+    #source /root/.bashrc
 
 	conda install -y -c conda-forge 'r-base>4'
 
