@@ -13,7 +13,7 @@ From: continuumio/miniconda3
 
 
 %post
-	apt-get install build-essentials
+	apt-get install build-essential
 	
 	conda install -y -c conda-forge mamba
 	mamba install 'r-base>4'
