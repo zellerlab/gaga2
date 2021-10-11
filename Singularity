@@ -13,9 +13,6 @@ Include: yum wget
 
 %post
 
-
-    mkdir -p /opt/software
-
     ### Install your packages ###
 
     # update yum
