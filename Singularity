@@ -22,9 +22,10 @@ From: continuumio/miniconda3
 
 
 	
-	conda install -y -c conda-forge mamba
-	mamba install 'r-base'
+	#conda install -y -c conda-forge mamba
+	#mamba install 'r-base'
 	# conda install -y -c conda-forge 'r-base>4'
+	sudo apt install r-base r-base-core r-recommended r-base-dev
 
 	R --version
 
