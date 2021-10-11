@@ -18,8 +18,10 @@ From: continuumio/miniconda3
 	apt-get install build-essential -y
 	
 	conda install -y -c conda-forge mamba
-	mamba install 'r-base>4'
+	mamba install 'r-base'
 	# conda install -y -c conda-forge 'r-base>4'
+
+	R --version
 
 	R --slave -e 'install.packages(c("cowplot", "tidyverse"), repos="https://cran.rstudio.com/")' && \
 	R --slave -e 'if (!requireNamespace("BiocManager",quietly=TRUE)) install.packages("BiocManager", repos="https://cran.rstudio.com/")' && \
