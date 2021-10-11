@@ -15,7 +15,7 @@ From: continuumio/miniconda3
 %post
 	rm -vf /var/lib/apt/lists/*
 	apt-get update -y
-	apt-get install build-essential libreadline-dev libncurses5 -y
+	apt-get install build-essential libreadline-dev libncurses5 r-base r-base-core r-recommended r-base-dev -y
 	cd /lib/x86_64-linux-gnu/
 	ln -s libreadline.so.7.0 libreadline.so.6
 
@@ -25,7 +25,6 @@ From: continuumio/miniconda3
 	#conda install -y -c conda-forge mamba
 	#mamba install 'r-base'
 	# conda install -y -c conda-forge 'r-base>4'
-	apt-get install r-base r-base-core r-recommended r-base-dev
 
 	R --version
 
