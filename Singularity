@@ -15,7 +15,7 @@ From: continuumio/miniconda3
 %post
 	rm -vf /var/lib/apt/lists/*
 	apt-get update -y
-	apt-get install build-essential libreadline-dev -y
+	apt-get install build-essential libreadline-dev libncurses5 -y
 	cd /lib/x86_64-linux-gnu/
 	ln -s libreadline.so.7.0 libreadline.so.6
 
