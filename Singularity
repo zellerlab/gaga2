@@ -28,12 +28,12 @@ Include: yum wget
 
 	wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
     bash Miniconda3-latest-Linux-x86_64.sh -b -p /opt/miniconda
-    echo "PATH=/opt/miniconda/bin:\$PATH" >> /root/.bashrc
-    echo "export PATH" >> /root/.bashrc
+    # echo "PATH=/opt/miniconda/bin:\$PATH" >> /root/.bashrc
+    # echo "export PATH" >> /root/.bashrc
     rm Miniconda3-latest-Linux-x86_64.sh
-    source /root/.bashrc
+    # source /root/.bashrc
 
-	conda install -y -c conda-forge r-base
+	conda install -y -c conda-forge 'r-base>4'
 
 	R --slave -e 'install.packages(c("cowplot", "tidyverse"), repos="https://cran.rstudio.com/")' && \
 	R --slave -e 'if (!requireNamespace("BiocManager",quietly=TRUE)) install.packages("BiocManager", repos="https://cran.rstudio.com/")' && \
