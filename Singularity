@@ -25,7 +25,7 @@ From: continuumio/miniconda3
 
     # yum -y install git bzip2 wget which sudo vi source zlib-devel xz-devel bzip2-devel
     # yum -y group install "Development Tools"
-	apt-get install git bzip2 wget which sudo
+	apt-get install git bzip2 wget 
 
 
 	#wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
