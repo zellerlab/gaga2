@@ -45,4 +45,4 @@ export PATH=$PATH
   # installing from bioc
   R --slave -e 'if (!requireNamespace("BiocManager",quietly=TRUE)) install.packages("BiocManager")'
   R --slave -e 'BiocManager::install(version = "3.13")'
-  R --slave -e 'BiocManager::install(c("dada2"))
+  R --slave -e 'BiocManager::install(c("dada2"))'
