@@ -1,5 +1,5 @@
 BootStrap: docker
-OSVersion: impish
+OSVersion: ubuntu
 MirrorURL: http://archive.ubuntu.com/ubuntu/
 
 
