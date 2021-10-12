@@ -26,11 +26,11 @@ if (length(args) >= 5) {
 
 # get the read files and sample names
 list.files(input_dir)
-sample_ids = basename(list.files(input_dir))
-print(sample_ids)
+#sample_ids = basename(list.files(input_dir))
+#print(sample_ids)
 
-r1_raw = sort(list.files(file.path(input_dir, sample_ids), pattern = "_R?1.(fastq|fq)(.gz)?", full.names = TRUE))
-r2_raw = sort(list.files(file.path(input_dir, sample_ids), pattern = "_R?2.(fastq|fq)(.gz)?", full.names = TRUE))
+r1_raw = sort(list.files(input_dir, pattern = "_R?1.(fastq|fq)(.gz)?", full.names = TRUE))
+r2_raw = sort(list.files(input_dir, pattern = "_R?2.(fastq|fq)(.gz)?", full.names = TRUE))
 print(r1_raw)
 print(r2_raw)
 
@@ -42,8 +42,8 @@ ggsave(g, filename = "read_quality.pdf",
        width = 12, height = 7, useDingbats=FALSE)
 
 # perform filtering and trimming
-r1_filtered = file.path(output_dir, "filtered", basename(r1_raw))
-r2_filtered = file.path(output_dir, "filtered", basename(r2_raw))
+r1_filtered = file.path(output_dir, basename(r1_raw))
+r2_filtered = file.path(output_dir, basename(r2_raw))
 
 print(r1_filtered)
 print(r2_filtered)

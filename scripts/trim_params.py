@@ -14,7 +14,7 @@ def main():
 		d = json.load(open(args.trim_params))
 		print(*d[0]["trimPosition"])
 	except:
-		print("-1 -1")
+		print(*("-1 -1".split()))
 
 	#try:
 	#	reads_in = gzip.open(args.reads, "rt")
