@@ -1,5 +1,5 @@
-BootStrap: debootstrap
-OSVersion: xenial
+BootStrap: docker
+OSVersion: impish
 MirrorURL: http://archive.ubuntu.com/ubuntu/
 
 
