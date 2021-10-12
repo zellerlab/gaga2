@@ -1,33 +1,48 @@
 Bootstrap: docker
-From: ubuntu:20.04
-# MirrorURL: http://archive.ubuntu.com/ubuntu/
-
-
-%setup
-
+From: ubuntu:18.04
+IncludeCmd: yes
 
 %environment
-
+R_VERSION=4.0
+export R_VERSION
+R_CONFIG_DIR=/etc/R/
+export R_CONFIG_DIR
+export LC_ALL=C
+export PATH=$PATH
 
 %post
-	#rm -vf /var/lib/apt/lists/*
-	#DEBIAN_FRONTEND=noninteractive
-	#apt-get update -y
-	apt-get install build-essential libreadline-dev libncurses5 r-base r-base-core r-recommended r-base-dev -y
-	cd /lib/x86_64-linux-gnu/
-	ln -s libreadline.so.7.0 libreadline.so.6
+  apt-get update
+  apt-get install -y apt-transport-https apt-utils software-properties-common
+  apt-get install -y add-apt-key
+  export DEBIAN_FRONTEND=noninteractive
+  ln -fs /usr/share/zoneinfo/America/New_York /etc/localtime
+  apt-get install -y tzdata
+  dpkg-reconfigure --frontend noninteractive tzdata
 
-	
-	#conda install -y -c conda-forge mamba
-	#mamba install 'r-base'
-	# conda install -y -c conda-forge 'r-base>4'
+  #add CRAN/Ubuntu repo, add key, then refresh
+  apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
+  add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran40/'
+  apt-get update
 
-	R --version
+  apt-get install -y wget nano
+  apt-get install -y libblas3 libblas-dev liblapack-dev liblapack3 curl
+  apt-get install -y gcc fort77 aptitude
+  aptitude install -y g++
+  aptitude install -y xorg-dev
+  aptitude install -y libreadline-dev
+  aptitude install -y gfortran
+  gfortran --version
+  apt-get install -y libssl-dev libxml2-dev libpcre3-dev liblzma-dev libbz2-dev libcurl4-openssl-dev 
+  apt-get install -y libhdf5-dev hdf5-helpers libmariadb-client-lgpl-dev
 
-	#R --slave -e 'install.packages(c("devtools"))
-	#R --slave -e 'library("devtools"); devtools::install_github("benjjneb/dada2", ref="v1.20"
-	#	
+  apt-get install -y r-base r-base-dev
+  
+  R --version
+  
+  # installing packages from cran
+  R --slave -e 'install.packages(c("devtools", "tidyverse", "cowplot"),repos="https://cran.rstudio.com/")'
 
-	R --slave -e 'install.packages(c("devtools", "cowplot", "tidyverse"), repos="https://cran.rstudio.com/")' && \
-	R --slave -e 'if (!requireNamespace("BiocManager",quietly=TRUE)) install.packages("BiocManager", repos="https://cran.rstudio.com/")' && \
-	R --slave -e 'BiocManager::install("dada2", version = "3.11")'	
+  # installing from bioc
+  R --slave -e 'if (!requireNamespace("BiocManager",quietly=TRUE)) install.packages("BiocManager")'
+  R --slave -e 'BiocManager::install(version = "3.11")'
+  R --slave -e 'BiocManager::install(c("dada2"))
