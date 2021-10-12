@@ -10,9 +10,9 @@ From: ubuntu:20.04
 
 
 %post
-	rm -vf /var/lib/apt/lists/*
-	DEBIAN_FRONTEND=noninteractive
-	apt-get update -y
+	#rm -vf /var/lib/apt/lists/*
+	#DEBIAN_FRONTEND=noninteractive
+	#apt-get update -y
 	apt-get install build-essential libreadline-dev libncurses5 r-base r-base-core r-recommended r-base-dev -y
 	cd /lib/x86_64-linux-gnu/
 	ln -s libreadline.so.7.0 libreadline.so.6
