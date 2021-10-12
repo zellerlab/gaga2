@@ -3,7 +3,7 @@ From: ubuntu:18.04
 IncludeCmd: yes
 
 %environment
-R_VERSION=4.0
+R_VERSION=4.1
 export R_VERSION
 R_CONFIG_DIR=/etc/R/
 export R_CONFIG_DIR
@@ -44,5 +44,5 @@ export PATH=$PATH
 
   # installing from bioc
   R --slave -e 'if (!requireNamespace("BiocManager",quietly=TRUE)) install.packages("BiocManager")'
-  R --slave -e 'BiocManager::install(version = "3.11")'
+  R --slave -e 'BiocManager::install(version = "3.13")'
   R --slave -e 'BiocManager::install(c("dada2"))
