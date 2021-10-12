@@ -1,9 +1,6 @@
-BootStrap: docker 
-From: ubuntu:20.04 
-#From: centos:7
-#OSVersion: 7
-#MirrorURL: http://mirror.centos.org/centos-%{OSVERSION}/%{OSVERSION}/os/$basearch/
-#Include: yum wget
+BootStrap: debootstrap
+OSVersion: xenial
+MirrorURL: http://archive.ubuntu.com/ubuntu/
 
 
 %setup
