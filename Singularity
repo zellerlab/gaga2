@@ -1,5 +1,5 @@
 BootStrap: docker 
-From: continuumio/miniconda3
+From: ubuntu:20.04 
 #From: centos:7
 #OSVersion: 7
 #MirrorURL: http://mirror.centos.org/centos-%{OSVERSION}/%{OSVERSION}/os/$basearch/
@@ -19,8 +19,6 @@ From: continuumio/miniconda3
 	cd /lib/x86_64-linux-gnu/
 	ln -s libreadline.so.7.0 libreadline.so.6
 
-
-
 	
 	#conda install -y -c conda-forge mamba
 	#mamba install 'r-base'
@@ -28,6 +26,10 @@ From: continuumio/miniconda3
 
 	R --version
 
-	R --slave -e 'install.packages(c("cowplot", "tidyverse"), repos="https://cran.rstudio.com/")' && \
+	#R --slave -e 'install.packages(c("devtools"))
+	#R --slave -e 'library("devtools"); devtools::install_github("benjjneb/dada2", ref="v1.20"
+	#	
+
+	R --slave -e 'install.packages(c("devtools", "cowplot", "tidyverse"), repos="https://cran.rstudio.com/")' && \
 	R --slave -e 'if (!requireNamespace("BiocManager",quietly=TRUE)) install.packages("BiocManager", repos="https://cran.rstudio.com/")' && \
-	R --slave -e 'BiocManager::install("dada2")'	
+	R --slave -e 'BiocManager::install("dada2", version = "3.11")'	
