@@ -1,5 +1,5 @@
 Bootstrap: docker
-OSVersion: ubuntu:20.04
+From: ubuntu:20.04
 # MirrorURL: http://archive.ubuntu.com/ubuntu/
 
 
