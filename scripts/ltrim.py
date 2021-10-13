@@ -71,15 +71,6 @@ def main():
         pathlib.Path(path).mkdir(exist_ok=True, parents=True)
         trim_file(r1, path, new_start=cutpos + 1)
         trim_file(r2, path, new_start=cutpos + 1)
-        # r1_base, r2_base = map(os.path.basename, (r1, r2))
-        #  try:
-        #    os.symlink(os.path.join(path, r1_base), os.path.join(figaro_path, r1_base))
-        #except:
-        #     pass
-        #try:
-        #    os.symlink(os.path.join(path, r2_base), os.path.join(figaro_path, r2_base))
-        #except:
-        #    pass
 
 
 if __name__ == "__main__":
