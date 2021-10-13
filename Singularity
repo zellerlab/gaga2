@@ -1,37 +1,48 @@
-BootStrap: docker 
-From: centos:7
-OSVersion: 7
-MirrorURL: http://mirror.centos.org/centos-%{OSVERSION}/%{OSVERSION}/os/$basearch/
-Include: yum wget
-
-
-%setup
-
+Bootstrap: docker
+From: ubuntu:18.04
+IncludeCmd: yes
 
 %environment
-
+R_VERSION=4.1
+export R_VERSION
+R_CONFIG_DIR=/etc/R/
+export R_CONFIG_DIR
+export LC_ALL=C
+export PATH=$PATH
 
 %post
+  apt-get update
+  apt-get install -y apt-transport-https apt-utils software-properties-common
+  apt-get install -y add-apt-key
+  export DEBIAN_FRONTEND=noninteractive
+  ln -fs /usr/share/zoneinfo/America/New_York /etc/localtime
+  apt-get install -y tzdata
+  dpkg-reconfigure --frontend noninteractive tzdata
 
-    ### Install your packages ###
+  #add CRAN/Ubuntu repo, add key, then refresh
+  apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
+  add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran40/'
+  apt-get update
 
-    # update yum
-    yum makecache fast && \
-    yum update -y
+  apt-get install -y wget nano
+  apt-get install -y libblas3 libblas-dev liblapack-dev liblapack3 curl
+  apt-get install -y gcc fort77 aptitude
+  aptitude install -y g++
+  aptitude install -y xorg-dev
+  aptitude install -y libreadline-dev
+  aptitude install -y gfortran
+  gfortran --version
+  apt-get install -y libssl-dev libxml2-dev libpcre3-dev liblzma-dev libbz2-dev libcurl4-openssl-dev 
+  apt-get install -y libhdf5-dev hdf5-helpers libmariadb-client-lgpl-dev
 
-    yum -y install git bzip2 wget which sudo vi source zlib-devel xz-devel bzip2-devel
-    yum -y group install "Development Tools"
+  apt-get install -y r-base r-base-dev
+  
+  R --version
+  
+  # installing packages from cran
+  R --slave -e 'install.packages(c("devtools", "tidyverse", "cowplot"),repos="https://cran.rstudio.com/")'
 
-
-	wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-    bash Miniconda3-latest-Linux-x86_64.sh -b -p /opt/miniconda
-    echo "PATH=/opt/miniconda/bin:\$PATH" >> /root/.bashrc
-    echo "export PATH" >> /root/.bashrc
-    rm Miniconda3-latest-Linux-x86_64.sh
-    source /root/.bashrc
-
-	conda install -y -c conda-forge r-base
-
-	R --slave -e 'install.packages(c("cowplot", "tidyverse"), repos="https://cran.rstudio.com/")' && \
-	R --slave -e 'if (!requireNamespace("BiocManager",quietly=TRUE)) install.packages("BiocManager", repos="https://cran.rstudio.com/")' && \
-	R --slave -e 'BiocManager::install("dada2")'	
+  # installing from bioc
+  R --slave -e 'if (!requireNamespace("BiocManager",quietly=TRUE)) install.packages("BiocManager")'
+  R --slave -e 'BiocManager::install(version = "3.13")'
+  R --slave -e 'BiocManager::install(c("dada2"))'
