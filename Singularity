@@ -36,7 +36,6 @@ export PATH=$PATH
 #  apt-get install -y libssl-dev libxml2-dev libpcre3-dev liblzma-dev libbz2-dev libcurl4-openssl-dev 
 #  apt-get install -y libhdf5-dev hdf5-helpers libmariadb-client-lgpl-dev
 #
-#  apt-get install -y r-base r-base-dev
   
 
   git clone https://github.com/cschu/figaro.git  # Zymo-Research repo does not yet allow 0 length primers
@@ -45,7 +44,7 @@ export PATH=$PATH
   python3 setup.py bdist_wheel
   pip3 install --force-reinstall dist/*.whl
 
-
+  apt-get install -y r-base r-base-dev
   R --version
   
   # installing packages from cran
