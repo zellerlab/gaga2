@@ -40,7 +40,7 @@ export PATH=$PATH
 
   git clone https://github.com/cschu/figaro.git  # Zymo-Research repo does not yet allow 0 length primers
   cd figaro
-  git checkout fix/primer_length_check
+  git checkout feature/single_end_support
   python3 setup.py bdist_wheel
   pip3 install --force-reinstall dist/*.whl
 
