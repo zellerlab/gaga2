@@ -11,7 +11,11 @@ def main():
 	# {'trimPosition': [285, 238], 'maxExpectedError': [4, 4], 'readRetentionPercent': 74.95, 'score': 56.95061011040093}
 	try:
 		d = json.load(open(args.trim_params))
-		print(*d[0]["trimPosition"])
+		fwd, rev = d[0]["trimPosition"]
+		if rev is None:
+			print(fwd)
+		else:
+			print(*(fwd, rev))
 	except:
 		print("-1 -1")
 

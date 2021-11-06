@@ -5,7 +5,7 @@ nextflow.enable.dsl = 2
 
 //def helpMessage() {
 //	log.info """
-//	
+//
 //	This is the gaga2 (figaro/dada2) 16S amplicon sequencing processing pipeline of the Zeller lab @ EMBL.
 //
 //	Usage:
@@ -65,7 +65,7 @@ process ltrim {
 	mkdir -p ltrim/
 	python ${projectDir}/scripts/ltrim.py . ltrim/
 	"""
-	
+
 }
 
 process figaro {
@@ -73,15 +73,18 @@ process figaro {
 
 	input:
 	path input_reads
+	val is_paired_end
 
 	output:
-    path("figaro/trimParameters.json"), emit: trim_params
-    path("figaro/*.png")
+	path("figaro/trimParameters.json"), emit: trim_params
+	path("figaro/*.png")
 
 	script:
+	def paired_params = (is_paired_end == true) ? "-r ${params.right_primer} -m ${params.min_overlap}" : ""
 	"""
-	figaro -i . -o figaro/ -a ${params.amplicon_length} -f ${params.left_primer} -r ${params.right_primer} -m ${params.min_overlap}
-	"""	
+	figaro -i . -o figaro/ -a ${params.amplicon_length} -f ${params.left_primer} ${paired_params}
+	"""
+	//  -r ${params.right_primer} -m ${params.min_overlap}
 }
 
 process extract_trim_parameters {
@@ -106,21 +109,22 @@ process dada2_preprocess {
 	path input_reads
 	path trim_params
 	path dada2_script
+	val is_paired_end
 
 	output:
 	path("read_quality.pdf")
-    path("read_quality_postqc.pdf")
-    path("filter_trim_table.tsv")
-    path("filter_trim_table.final.tsv"), emit: trim_table
+	path("read_quality_postqc.pdf")
+	path("filter_trim_table.tsv")
+	path("filter_trim_table.final.tsv"), emit: trim_table
 	path("dada2_preprocess.log")
-    path("dada2_preprocess/*.{fastq,fq,fastq.gz,fq.gz}"), emit: filtered_reads
+	path("dada2_preprocess/*.{fastq,fq,fastq.gz,fq.gz}"), emit: filtered_reads
 
 	script:
 	"""
 	mkdir -p dada2_in/
 	for f in \$(find . -maxdepth 1 -type l); do ln -s ../\$f dada2_in/; done
-	rm dada2_in/trim_params.txt dada2_in/dada2_preprocess.R
-	Rscript --vanilla dada2_preprocess.R dada2_in/ dada2_preprocess/ \$(cat trim_params.txt) $task.cpus > dada2_preprocess.log
+	rm dada2_in/trim_params.txt dada2_in/*.R
+	Rscript --vanilla ${dada2_script} dada2_in/ dada2_preprocess/ \$(cat trim_params.txt) $task.cpus > dada2_preprocess.log
 	"""
 }
 
@@ -132,6 +136,7 @@ process dada2_analysis {
 	path input_reads
 	path filter_trim_table
 	path dada2_script
+	val is_paired_end
 
 	output:
 	path("dada2_analysis.log")
@@ -146,29 +151,49 @@ process dada2_analysis {
 	"""
 	mkdir -p dada2_in/
 	for f in \$(find . -maxdepth 1 -type l); do ln -s ../\$f dada2_in/; done
-	rm dada2_in/dada2_analysis.R dada2_in/filter_trim_table.final.tsv
-	Rscript --vanilla dada2_analysis.R dada2_in/ dada2_analysis/ filter_trim_table.final.tsv $task.cpus > dada2_analysis.log
+	rm dada2_in/*.R dada2_in/filter_trim_table.final.tsv
+	Rscript --vanilla ${dada2_script} dada2_in/ dada2_analysis/ filter_trim_table.final.tsv $task.cpus > dada2_analysis.log
 	"""
 }
-
 
 
 workflow {
 	fastq_ch = Channel
 		.fromPath(params.input_dir + "/**_*[12].{fastq,fq,fastq.gz,fq.gz}")
-		.map { file -> 
+		.map { file ->
 			def sample = file.name.replaceAll(/.(fastq|fq)(.gz)?$/, "")
 			sample = sample.replaceAll(/_R?[12]$/, "")
 			return tuple(sample, file)
 		}
-		.groupTuple()
+		.groupTuple(sort: true)
+
+	if (!params.single_end) {
+		library_layout = "PAIRED";
+		dada2_preprocess_script = "$projectDir/R_scripts/dada2_preprocess_paired.R"
+		dada2_analysis_script = "$projectDir/R_scripts/dada2_analysis_paired.R"
+		is_paired_end = true
+	} else {
+		library_layout = "SINGLE";
+		dada2_preprocess_script = "$projectDir/R_scripts/dada2_preprocess_single.R"
+		dada2_analysis_script = "$projectDir/R_scripts/dada2_analysis_single.R"
+		is_paired_end = false
+	}
+
+	print library_layout
+
+	fastq_ch.collect().view()
+
+	files_only_ch = fastq_ch
 		.map { sample, files -> return files }
+		.collect()
 
-	ltrim(fastq_ch.collect())
+	files_only_ch.view()
 
-	figaro(ltrim.out.ltrimmed_reads)
+	ltrim(files_only_ch)
+
+	figaro(ltrim.out.ltrimmed_reads, is_paired_end)
 	extract_trim_parameters(figaro.out.trim_params)
 
-	dada2_preprocess(ltrim.out.ltrimmed_reads, extract_trim_parameters.out.trim_params, "$projectDir/R_scripts/dada2_preprocess.R")
-	dada2_analysis(dada2_preprocess.out.filtered_reads, dada2_preprocess.out.trim_table, "$projectDir/R_scripts/dada2_analysis.R")
+	dada2_preprocess(ltrim.out.ltrimmed_reads, extract_trim_parameters.out.trim_params, dada2_preprocess_script, is_paired_end)
+	dada2_analysis(dada2_preprocess.out.filtered_reads, dada2_preprocess.out.trim_table, dada2_analysis_script, is_paired_end)
 }
