@@ -8,7 +8,7 @@ export R_VERSION
 R_CONFIG_DIR=/etc/R/
 export R_CONFIG_DIR
 export LC_ALL=C
-export PATH=$PATH
+export PATH=/opt/software/miniconda3/bin:$PATH
 
 %post
   apt-get update
