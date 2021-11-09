@@ -25,18 +25,13 @@ export PATH=$PATH
   apt-get update
 
   apt-get install -y wget python3-pip git nano libblas3 libblas-dev liblapack-dev liblapack3 curl gcc fort77 aptitude g++ xorg-dev libreadline-dev gfortran libssl-dev libxml2-dev libpcre3-dev liblzma-dev libbz2-dev libcurl4-openssl-dev libhdf5-dev hdf5-helpers libmariadb-client-lgpl-dev
-#  apt-get install -y wget nano
-#  apt-get install -y libblas3 libblas-dev liblapack-dev liblapack3 curl
-#  apt-get install -y gcc fort77 aptitude
-#  aptitude install -y g++
-#  aptitude install -y xorg-dev
-#  aptitude install -y libreadline-dev
-#  aptitude install -y gfortran
 #  gfortran --version
-#  apt-get install -y libssl-dev libxml2-dev libpcre3-dev liblzma-dev libbz2-dev libcurl4-openssl-dev 
-#  apt-get install -y libhdf5-dev hdf5-helpers libmariadb-client-lgpl-dev
-#
-  
+ 
+  wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh 
+  bash Miniconda3-latest-Linux-x86_64.sh -b -p /opt/software/miniconda3
+  rm -f Miniconda3-latest-Linux-x86_64.sh
+
+  /opt/software/miniconda3/bin/conda install -y -c conda-forge -c bioconda bbmap seqtk fastqc multiqc 
 
   git clone https://github.com/cschu/figaro.git  # Zymo-Research repo does not yet allow 0 length primers
   cd figaro
