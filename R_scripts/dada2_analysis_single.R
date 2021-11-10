@@ -78,6 +78,9 @@ table(nchar(getSequences(seqtab.nochim)))
 
 # track reads
 getN = function(x) sum(getUniques(x))
+print(r1_dada)
+print(filter_table)
+print(seqtab.nochim)
 track = cbind(filter_table, sapply(r1_dada, getN), rowSums(seqtab.nochim))
 print(c("TRACK", length(track), length(sample_ids)))
 colnames(track) = c("input", "filtered", "denoisedF", "nonchim")
