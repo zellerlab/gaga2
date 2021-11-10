@@ -5,6 +5,7 @@ process qc_bbduk {
     input:
     tuple val(sample), path(reads)
 	path(adapters)
+	path(run_sentinel)
 
     output:
     tuple val(sample), path("${sample.id}/${sample.id}_R*.fastq.gz"), emit: reads
@@ -14,9 +15,9 @@ process qc_bbduk {
     script:
     def maxmem = task.memory.toString().replace(/ GB/, "g")
     //def read1 = "in1=${sample.id}_R1.fastq.gz out1=${sample.id}/${sample.id}_R1.fastq.gz"
-    def read1 = "in1=${sample.id}_${sample.pair_id}1.fastq.gz out1=${sample.id}/${sample.id}_R1.fastq.gz"
+    def read1 = "in1=${sample.id}_R1.fastq.gz out1=${sample.id}/${sample.id}_R1.fastq.gz"
     //read2 = sample.is_paired ? "in2=${sample.id}_R2.fastq.gz out2=${sample.id}/${sample.id}_R2.fastq.gz outs=${sample.id}/${sample.id}_O.fastq.gz" : ""
-    read2 = sample.is_paired ? "in2=${sample.id}_${sample.pair_id}2.fastq.gz out2=${sample.id}/${sample.id}_R2.fastq.gz outs=${sample.id}/${sample.id}_O.fastq.gz" : ""
+    read2 = sample.is_paired ? "in2=${sample.id}_R2.fastq.gz out2=${sample.id}/${sample.id}_R2.fastq.gz outs=${sample.id}/${sample.id}_O.fastq.gz" : ""
 
 	if (params.primers) {
 		qc_params = params.qc_params_primers

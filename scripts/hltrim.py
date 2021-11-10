@@ -33,10 +33,16 @@ def main():
 	# ap.add_argument("--r2", type=str)
 	ap.add_argument("reads", nargs="*", type=str)
 	ap.add_argument("--outdir", "-o", type=str, default="output")
-	ap.add_argument("--cutlen", "-c", type=int)
+	ap.add_argument("--cutlen", "-c", type=str)
 	args = ap.parse_args()
 
 	pathlib.Path(args.outdir).mkdir(exist_ok=True, parents=True)
+
+	cutlen = args.cutlen.split(",")
+	if len(cutlen) == 1:
+		r1cut, r2cut = int(cutlen[0]), None
+	else:
+		r1cut, r2cut, *_ = map(int, cutlen)
 
 	reads = sorted(args.reads)
 	r1 = reads[0]
@@ -57,12 +63,12 @@ def main():
 
 		while True:
 			try:
-				r1_rec = process_fastq_record(next(r1_stream), args.cutlen)
+				r1_rec = process_fastq_record(next(r1_stream), r1cut)
 			except StopIteration:
 				break
 			if r2_stream:
 				try:
-					r2_rec = process_fastq_record(next(r2_stream), args.cutlen)
+					r2_rec = process_fastq_record(next(r2_stream), r2cut)
 				except StopIteration:
 					raise ValueError("r2 cannot be exhausted before r1")
 			else:

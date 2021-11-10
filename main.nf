@@ -43,20 +43,6 @@ include { classify_sample } from "./modules/nevermore/functions"
 //}
 
 
-process check_readlengths {
-	input:
-	path input_reads
-
-	output:
-	path("RUN_FIGARO"), emit: run_figaro, optional: true
-
-	script:
-	"""
-	python ${projectDir}/scripts/check_readlengths.py . .
-	"""
-}
-
-
 process figaro {
 	publishDir "${params.output_dir}", mode: params.publish_mode
 
@@ -88,7 +74,6 @@ process extract_trim_parameters {
 	"""
 	python $projectDir/scripts/trim_params.py $trim_params > trim_params.txt
 	"""
-
 }
 
 
@@ -153,6 +138,7 @@ process assess_read_length_distribution {
 
 	output:
 	path("read_length_thresholds.txt"), emit: read_length
+	path("READSET_HOMOGENEOUS"), emit: hom_reads_marker, optional: true
 
 	script:
 	"""
@@ -171,7 +157,7 @@ process homogenise_readlengths {
 
     script:
     """
-	read_len=\$(head -n 1 ${read_lengths} | cut -f 1)
+	read_len=\$(head -n 1 ${read_lengths} | cut -f 1,4 | tr "\t" ",")
 	python ${projectDir}/scripts/hltrim.py ${reads} -c \$read_len -o ${sample.id}
     """
 }
@@ -184,7 +170,7 @@ workflow raw_reads_figaro {
 		run_figaro
 
 	main:
-		qc_bbduk(reads, "${projectDir}/assets/adapters.fa")
+		qc_bbduk(reads, "${projectDir}/assets/adapters.fa", run_figaro)
 
 		fastqc(qc_bbduk.out.reads)
 		fastqc_ch = fastqc.out.reports
@@ -205,6 +191,48 @@ workflow raw_reads_figaro {
 }
 
 
+workflow check_for_preprocessing {
+	take:
+		reads
+
+	main:
+		reads.view()
+		fastqc(reads)
+		assess_read_length_distribution(
+			fastqc.out.reports
+				.map { sample, report -> return report }
+				.collect()
+		)
+
+	emit:
+		readlen_dist = assess_read_length_distribution.out.read_length
+		hom_reads_marker = assess_read_length_distribution.out.hom_reads_marker
+}
+
+
+process prepare_fastqs {
+    input:
+    tuple val(sample), path(fq)
+
+    output:
+    tuple val(sample), path("fastq/${sample.id}/${sample.id}_R*.fastq.gz"), emit: reads
+
+    script:
+    if (sample.is_paired) {
+        """
+        mkdir -p fastq/${sample.id}
+        ln -sf ../../${fq[0]} fastq/${sample.id}/${sample.id}_R1.fastq.gz
+        ln -sf ../../${fq[1]} fastq/${sample.id}/${sample.id}_R2.fastq.gz
+        """
+    } else {
+        """
+        mkdir -p fastq/${sample.id}
+        ln -sf ../../${fq[0]} fastq/${sample.id}/${sample.id}_R1.fastq.gz
+        """
+    }
+}
+
+
 workflow {
 	fastq_ch = Channel
 		.fromPath(params.input_dir + "/**_*[12].{fastq,fq,fastq.gz,fq.gz}")
@@ -215,6 +243,8 @@ workflow {
 		}
 		.groupTuple(sort: true)
 		.map { classify_sample(it[0], it[1]) }
+
+	prepare_fastqs(fastq_ch)
 
 	if (params.single_end) {
 		library_layout = "SINGLE";
@@ -231,20 +261,19 @@ workflow {
 	print library_layout
 
 	trim_params_ch = Channel.empty()
+	dada_reads_ch = Channel.empty()
 
 	if (!params.preprocessed) {
 
 		/* check if dataset was preprocessed */
 
-		files_only_ch = fastq_ch
-			.map { sample, files -> return files }
-			.collect()
+		check_for_preprocessing(prepare_fastqs.out.reads)
 
-		check_readlengths(files_only_ch)
-
-		raw_reads_figaro(fastq_ch, check_readlengths.out.run_figaro)
+		raw_reads_figaro(prepare_fastqs.out.reads, check_for_preprocessing.out.hom_reads_marker)
 		trim_params_ch = trim_params_ch
 			.concat(raw_reads_figaro.out.trim_params)
+
+		dada_reads_ch = dada_reads_ch.concat(raw_reads_figaro.out.reads)
 
 	}
 
@@ -254,6 +283,12 @@ workflow {
 	trim_params_ch = trim_params_ch
 		.concat(Channel.fromPath("${workDir}/trim_params.txt"))
 
-	dada2_preprocess(raw_reads_figaro.out.reads, trim_params_ch.first(), dada2_preprocess_script, is_paired_end)
+	dada_reads_ch = dada_reads_ch.concat(
+		prepare_fastqs.out.reads
+			.map { sample, reads -> reads }
+			.collect()
+	)
+
+	dada2_preprocess(dada_reads_ch.first(), trim_params_ch.first(), dada2_preprocess_script, is_paired_end)
 	dada2_analysis(dada2_preprocess.out.filtered_reads, dada2_preprocess.out.trim_table, dada2_analysis_script, is_paired_end)
 }
