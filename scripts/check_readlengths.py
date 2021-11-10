@@ -36,6 +36,7 @@ def main():
 				print("WARNING: read lengths are not homogenous in {fq}. Figaro will not be executed.".format(fq=fn))
 				open(os.path.join(args.output_dir, "SKIP_FIGARO"), "wt").close()
 				return None
+	open(os.path.join(args.output_dir, "RUN_FIGARO"), "wt").close()
 
 
 	
