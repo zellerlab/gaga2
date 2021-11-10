@@ -41,14 +41,9 @@ include { classify_sample } from "./modules/nevermore/functions"
 //	helpMessage()
 //	exit 0
 //}
-//
-
-
 
 
 process check_readlengths {
-	//publishDir "${params.output_dir}", mode: params.publish_mode
-
 	input:
 	path input_reads
 
@@ -61,47 +56,6 @@ process check_readlengths {
 	"""
 }
 
-process ltrim {
-	publishDir "${params.output_dir}", mode: params.publish_mode
-
-	input:
-	path input_reads
-
-	output:
-	path("ltrim/*.{fastq,fq,fastq.gz,fq.gz}"), emit: ltrimmed_reads
-
-	script:
-	"""
-	mkdir -p ltrim/
-	python ${projectDir}/scripts/ltrim.py . ltrim/
-	"""
-
-}
-
-process figaro_dummy {
-	publishDir "${params.output_dir}", mode: params.publish_mode
-
-	input:
-	path input_reads
-	val is_paired_end
-	path run_figaro_sentinel
-
-	output:
-	path("figaro/trimParameters.txt"), emit: trim_params
-	
-
-	script:
-
-	"""
-	mkdir figaro
-	echo "13 13\n" > figaro/trimParameters.txt
-	"""
-}
-
-
-
-
-
 
 process figaro {
 	publishDir "${params.output_dir}", mode: params.publish_mode
@@ -109,7 +63,6 @@ process figaro {
 	input:
 	path input_reads
 	val is_paired_end
-	//path run_figaro_sentinel
 
 	output:
 	path("figaro/trimParameters.json"), emit: trim_params
@@ -121,15 +74,14 @@ process figaro {
 	"""
 	figaro -i . -o figaro/ -a ${params.amplicon_length} -f ${params.left_primer} ${paired_params}
 	"""
-	//  -r ${params.right_primer} -m ${params.min_overlap}
 }
+
 
 process extract_trim_parameters {
 	input:
 	path(trim_params)
 
 	output:
-	//tuple val(left), val(right), emit: trim_params
 	path("trim_params.txt"), emit: trim_params
 
 	script:
@@ -138,6 +90,7 @@ process extract_trim_parameters {
 	"""
 
 }
+
 
 process dada2_preprocess {
 	publishDir "${params.output_dir}", mode: params.publish_mode
@@ -196,7 +149,6 @@ process dada2_analysis {
 
 process assess_read_length_distribution {
 	input:
-	//tuple val(sample), path(fastqc_reports)
 	path(fastq_reports)
 
 	output:
@@ -209,27 +161,24 @@ process assess_read_length_distribution {
 }
 
 
-
 process homogenise_readlengths {
     input:
 	tuple val(sample), path(reads)
 	path(read_lengths)
 
     output:
-	//path("${sample.id}_R*.{fastq,fq,fastq.gz,fq.gz}"), emit: homogenised_reads
 	path("${sample.id}/*.{fastq,fq,fastq.gz,fq.gz}"), emit: reads
-	stdout emit: blah
 
     script:
     """
 	read_len=\$(head -n 1 ${read_lengths} | cut -f 1)
-	echo \$read_len
 	python ${projectDir}/scripts/hltrim.py ${reads} -c \$read_len -o ${sample.id}
     """
 }
 
+
 workflow raw_reads_figaro {
-	
+
 	take:
 		reads
 		run_figaro
@@ -241,7 +190,6 @@ workflow raw_reads_figaro {
 		fastqc_ch = fastqc.out.reports
 			.map { sample, report -> return report }
 			.collect()
-			//.groupTuple(sort: true)
 
 		assess_read_length_distribution(fastqc_ch)
 		homogenise_readlengths(qc_bbduk.out.reads, assess_read_length_distribution.out.read_length)
@@ -250,16 +198,11 @@ workflow raw_reads_figaro {
 		figaro(hom_reads, !params.single_end)
 		extract_trim_parameters(figaro.out.trim_params)
 
-		//figaro_dummy(files_only_ch, is_paired_end, check_readlengths.out.run_figaro)
-		//trim_params_ch = trim_params_ch.concat(figaro_dummy.out.trim_params)
-		//extract_trim_parameters(figaro_dummy.out.trim_params)
-
 	emit:
 		reads = hom_reads
 		trim_params = extract_trim_parameters.out.trim_params
-		
-}
 
+}
 
 
 workflow {
@@ -287,58 +230,30 @@ workflow {
 
 	print library_layout
 
-	/*qc_bbduk(fastq_ch, "${projectDir}/assets/adapters.fa")
+	trim_params_ch = Channel.empty()
 
-	fastqc(qc_bbduk.out.reads)
-	fastqc_ch = fastqc.out.reports
-		.groupTuple(sort: true)
+	if (!params.preprocessed) {
 
-	assess_read_length_distribution(fastqc.out.reports.collect())
-	homogenise_readlengths(qc_bbduk.out.reads, assess_read_length_distribution.out.read_length)
-	*/
+		/* check if dataset was preprocessed */
 
-	files_only_ch = fastq_ch
-		.map { sample, files -> return files }
-		.collect()
+		files_only_ch = fastq_ch
+			.map { sample, files -> return files }
+			.collect()
 
-	files_only_ch.view()
+		check_readlengths(files_only_ch)
 
-	check_readlengths(files_only_ch)
+		raw_reads_figaro(fastq_ch, check_readlengths.out.run_figaro)
+		trim_params_ch = trim_params_ch
+			.concat(raw_reads_figaro.out.trim_params)
 
-	raw_reads_figaro(fastq_ch, check_readlengths.out.run_figaro)
+	}
 
 	trim_params = file("${workDir}/trim_params.txt")
     trim_params.text = "-1 -1\n"
 
-	trim_params_ch = Channel.empty()
-		.concat(raw_reads_figaro.out.trim_params)
+	trim_params_ch = trim_params_ch
 		.concat(Channel.fromPath("${workDir}/trim_params.txt"))
 
 	dada2_preprocess(raw_reads_figaro.out.reads, trim_params_ch.first(), dada2_preprocess_script, is_paired_end)
 	dada2_analysis(dada2_preprocess.out.filtered_reads, dada2_preprocess.out.trim_table, dada2_analysis_script, is_paired_end)
-
-
-
-	//check_readlengths.out.skip_figaro.view()
-
-/*	trim_params_ch = Channel.empty()
-	//figaro_dummy(files_only_ch, is_paired_end, check_readlengths.out.run_figaro)
-	//trim_params_ch = trim_params_ch.concat(figaro_dummy.out.trim_params)
-	extract_trim_parameters(figaro_dummy.out.trim_params)
-	trim_params_ch = trim_params_ch.concat(extract_trim_parameters.out.trim_params)
-
-	trim_params = file("${workDir}/trim_params.txt")
-    trim_params.text = "-1 -1\n"
-
-	trim_params_ch = trim_params_ch.concat(Channel.fromPath("${workDir}/trim_params.txt"))
-
-	//trim_params_ch.first().view()
-*/
-
-/*	
-	ltrim(files_only_ch)
-	// dada2_preprocess(ltrim.out.ltrimmed_reads, extract_trim_parameters.out.trim_params, dada2_preprocess_script, is_paired_end)
-	dada2_preprocess(ltrim.out.ltrimmed_reads, trim_params_ch.first(), dada2_preprocess_script, is_paired_end)
-	dada2_analysis(dada2_preprocess.out.filtered_reads, dada2_preprocess.out.trim_table, dada2_analysis_script, is_paired_end)
-*/
 }
