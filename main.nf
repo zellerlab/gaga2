@@ -78,6 +78,7 @@ process extract_trim_parameters {
 
 
 process dada2_preprocess {
+	label 'dada2'
 	publishDir "${params.output_dir}", mode: params.publish_mode
 
 	input:
@@ -105,6 +106,7 @@ process dada2_preprocess {
 
 
 process dada2_analysis {
+	label 'dada2'
 	publishDir "${params.output_dir}", mode: params.publish_mode
 
 	input:
@@ -143,23 +145,37 @@ process assess_read_length_distribution {
 	script:
 	"""
 	python ${projectDir}/scripts/assess_readlengths.py . > read_length_thresholds.txt
-	""" 
+	"""
 }
 
 
 process homogenise_readlengths {
-    input:
+	label 'bbduk'
+
+	input:
 	tuple val(sample), path(reads)
 	path(read_lengths)
 
-    output:
+	output:
 	path("${sample.id}/*.{fastq,fq,fastq.gz,fq.gz}"), emit: reads
 
-    script:
-    """
-	read_len=\$(head -n 1 ${read_lengths} | cut -f 1,4 | tr "\t" ",")
-	python ${projectDir}/scripts/hltrim.py ${reads} -c \$read_len -o ${sample.id}
-    """
+	script:
+	def maxmem = task.memory.toString().replace(/ GB/, "g")
+
+	if (sample.is_paired) {
+		"""
+		mkdir -p ${sample.id}
+		r1len=\$(head -n 1 ${read_lengths} | cut -f 1)
+		r2len=\$(head -n 1 ${read_lengths} | cut -f 4)
+		bbduk.sh -Xmx${maxmem} t=${task.cpus} ordered=t minlength=\$((r1len-1)) ftr=\$((r1len-1)) stats=${sample.id}/${sample.id}.homr_stats_1.txt in=${sample.id}_R1.fastq.gz out=${sample.id}/${sample.id}_R1.fastq.gz
+		bbduk.sh -Xmx${maxmem} t=${task.cpus} ordered=t minlength=\$((r2len-1)) ftr=\$((r2len-1)) stats=${sample.id}/${sample.id}.homr_stats_2.txt in=${sample.id}_R2.fastq.gz out=${sample.id}/${sample.id}_R2.fastq.gz
+		"""
+	} else {
+		"""
+		mkdir -p ${sample.id}
+		r1len=\$(head -n 1 ${read_lengths} | cut -f 1)
+		bbduk.sh -Xmx${maxmem} t=${task.cpus} ordered=t minlength=\$((r1len-1)) ftr=\$((r1len-1)) stats=${sample.id}/${sample.id}.homr_stats_1.txt in=${sample.id}_R1.fastq.gz out=${sample.id}/${sample.id}_R1.fastq.gz
+		"""
 }
 
 
@@ -211,25 +227,25 @@ workflow check_for_preprocessing {
 
 
 process prepare_fastqs {
-    input:
-    tuple val(sample), path(fq)
+	input:
+	tuple val(sample), path(fq)
 
-    output:
-    tuple val(sample), path("fastq/${sample.id}/${sample.id}_R*.fastq.gz"), emit: reads
+	output:
+	tuple val(sample), path("fastq/${sample.id}/${sample.id}_R*.fastq.gz"), emit: reads
 
-    script:
-    if (sample.is_paired) {
-        """
-        mkdir -p fastq/${sample.id}
-        ln -sf ../../${fq[0]} fastq/${sample.id}/${sample.id}_R1.fastq.gz
-        ln -sf ../../${fq[1]} fastq/${sample.id}/${sample.id}_R2.fastq.gz
-        """
-    } else {
-        """
-        mkdir -p fastq/${sample.id}
-        ln -sf ../../${fq[0]} fastq/${sample.id}/${sample.id}_R1.fastq.gz
-        """
-    }
+	script:
+	if (sample.is_paired) {
+		"""
+		mkdir -p fastq/${sample.id}
+		ln -sf ../../${fq[0]} fastq/${sample.id}/${sample.id}_R1.fastq.gz
+		ln -sf ../../${fq[1]} fastq/${sample.id}/${sample.id}_R2.fastq.gz
+		"""
+	} else {
+		"""
+		mkdir -p fastq/${sample.id}
+		ln -sf ../../${fq[0]} fastq/${sample.id}/${sample.id}_R1.fastq.gz
+		"""
+	}
 }
 
 
@@ -278,7 +294,7 @@ workflow {
 	}
 
 	trim_params = file("${workDir}/trim_params.txt")
-    trim_params.text = "-1 -1\n"
+	trim_params.text = "-1 -1\n"
 
 	trim_params_ch = trim_params_ch
 		.concat(Channel.fromPath("${workDir}/trim_params.txt"))
