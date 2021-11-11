@@ -39,6 +39,23 @@ export PATH=/opt/software/miniconda3/bin:$PATH
   python3 setup.py bdist_wheel
   pip3 install --force-reinstall dist/*.whl
 
+  cd /opt/software
+  wget -q https://github.com/jfmrod/MAPseq/releases/download/2.0.1alpha/mapseq-2.0.1alpha-linux.tar.gz
+  tar xzf mapseq-2.0.1alpha-linux.tar.gz
+  rm mapseq-2.0.1alpha-linux.tar.gz
+  mv mapseq-2.0.1alpha-linux mapseq
+
+  ln -s /opt/software/mapseq/mapseq /usr/bin/
+  ln -s /opt/softwaremapseq/share /usr/bin/
+
+
+
+
+
+
+
+
+
   apt-get install -y r-base r-base-dev
   R --version
   
