@@ -5,6 +5,7 @@ nextflow.enable.dsl = 2
 include { qc_bbduk } from "./modules/nevermore/qc/bbduk"
 include { fastqc } from "./modules/nevermore/qc/fastqc"
 include { classify_sample } from "./modules/nevermore/functions"
+include { mapseq; mapseq_otutable } from "./modules/profilers/mapseq"
 
 
 //def helpMessage() {
@@ -121,7 +122,7 @@ process dada2_analysis {
 	path("summary_table.tsv")
 	path("result.RData")
 	path("dada2_figures.pdf")
-	path("ASVs.tsv")
+	path("ASVs.tsv"), emit: asv_sequences
 	path("asv_table.tsv")
 
 	script:
@@ -133,6 +134,24 @@ process dada2_analysis {
 	"""
 }
 
+process asv2fasta {
+	publishDir "${params.output_dir}", mode: params.publish_mode
+
+	input:
+	path(asv_seqs)
+
+	output:
+	tuple val(meta), path("ASVs.fasta"), emit: asv_fasta
+
+	script:
+	meta = [:]
+	meta.id = "all"
+	meta.is_paired = false
+	"""
+	tail -n +2 ${asv_seqs} | sed 's/^/>/' | tr '\t' '\n' > ASVs.fasta
+	"""
+
+}
 
 process assess_read_length_distribution {
 	input:
@@ -308,4 +327,8 @@ workflow {
 
 	dada2_preprocess(dada_reads_ch.first(), trim_params_ch.first(), dada2_preprocess_script, is_paired_end)
 	dada2_analysis(dada2_preprocess.out.filtered_reads, dada2_preprocess.out.trim_table, dada2_analysis_script, is_paired_end)
+	asv2fasta(dada2_analysis.out.asv_sequences)
+
+	mapseq(asv2fasta.out.asv_fasta, params.mapseq_db_path, params.mapseq_db_name)
+	mapseq_otutable(mapseq.out.bac_ssu)
 }
