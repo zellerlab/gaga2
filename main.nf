@@ -176,6 +176,7 @@ process homogenise_readlengths {
 		r1len=\$(head -n 1 ${read_lengths} | cut -f 1)
 		bbduk.sh -Xmx${maxmem} t=${task.cpus} ordered=t minlength=\$((r1len-1)) ftr=\$((r1len-1)) stats=${sample.id}/${sample.id}.homr_stats_1.txt in=${sample.id}_R1.fastq.gz out=${sample.id}/${sample.id}_R1.fastq.gz
 		"""
+	}
 }
 
 
