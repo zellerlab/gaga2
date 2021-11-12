@@ -46,7 +46,7 @@ export PATH=/opt/software/miniconda3/bin:$PATH
   mv mapseq-2.0.1alpha-linux mapseq
 
   ln -s /opt/software/mapseq/mapseq /usr/bin/
-  ln -s /opt/softwaremapseq/share /usr/bin/
+  ln -s /opt/software/mapseq/share /usr/bin/
 
 
 
