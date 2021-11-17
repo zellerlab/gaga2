@@ -1,5 +1,7 @@
 # gaga2 - automated 16S amplicon analysis with Figaro/DADA2
 
+![](docs/img/gaga2_flow.png)
+
 ## Installation instructions
 `gaga2` requires a working `nextflow` installation (v20.4+). 
 
