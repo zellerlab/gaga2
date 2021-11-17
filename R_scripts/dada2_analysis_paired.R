@@ -19,6 +19,9 @@ if (length(args) >= 4) {
 	nthreads = TRUE
 }
 
+dada2_chimera_method = args[5] #
+dada2_chimera_min_fold_parent_over_abundance = as.numeric(c(args[6]))
+
 # get the read files and sample names
 list.files(input_dir)
 sample_ids = basename(list.files(input_dir))
@@ -70,7 +73,8 @@ print("ASV length")
 print(table(nchar(getSequences(seqtab))))
 
 # remove chimeras
-seqtab.nochim = removeBimeraDenovo(seqtab, method="consensus", multithread=nthreads, verbose=TRUE)
+#seqtab.nochim = removeBimeraDenovo(seqtab, method="consensus", multithread=nthreads, verbose=TRUE)
+seqtab.nochim = removeBimeraDenovo(seqtab, method=dada2_chimera_method, minFoldParentOverAbundance=dada2_chimera_min_fold_parent_over_abundance, multithread=nthreads, verbose=TRUE)
 n_OTU_after_removing_chimeras = dim(seqtab.nochim)[2]
 print(dim(seqtab.nochim))
 asv.table = t(seqtab.nochim)

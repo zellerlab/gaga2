@@ -130,7 +130,7 @@ process dada2_analysis {
 	mkdir -p dada2_in/
 	for f in \$(find . -maxdepth 1 -type l); do ln -s ../\$f dada2_in/; done
 	rm dada2_in/*.R dada2_in/filter_trim_table.final.tsv
-	Rscript --vanilla ${dada2_script} dada2_in/ dada2_analysis/ filter_trim_table.final.tsv $task.cpus > dada2_analysis.log
+	Rscript --vanilla ${dada2_script} dada2_in/ dada2_analysis/ filter_trim_table.final.tsv $task.cpus ${params.dada2_chimera_method} ${params.dada2_chimera_min_fold_parent_over_abundance} > dada2_analysis.log
 	"""
 }
 
