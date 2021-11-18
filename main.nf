@@ -121,7 +121,7 @@ process dada2_analysis {
 	path("error_model.pdf")
 	path("summary_table.tsv")
 	path("result.RData")
-	path("dada2_figures.pdf")
+	path("dada2_figures.pdf"), optional: true
 	path("ASVs.tsv"), emit: asv_sequences
 	path("asv_table.tsv")
 
