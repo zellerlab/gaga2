@@ -8,6 +8,7 @@
 Other dependencies:
 * bbmap 
 * fastqc
+* seqtk
 * figaro
 * R v4+ with dada2, devtools, tidyverse, and cowplot installed
 * MapSeq
