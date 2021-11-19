@@ -19,6 +19,9 @@ if (length(args) >= 4) {
 	nthreads = TRUE
 }
 
+dada2_chimera_method = args[5] #
+dada2_chimera_min_fold_parent_over_abundance = as.numeric(c(args[6]))
+
 # get the read files and sample names
 list.files(input_dir)
 sample_ids = basename(list.files(input_dir))
@@ -70,7 +73,8 @@ print("ASV length")
 print(table(nchar(getSequences(seqtab))))
 
 # remove chimeras
-seqtab.nochim = removeBimeraDenovo(seqtab, method="consensus", multithread=nthreads, verbose=TRUE)
+#seqtab.nochim = removeBimeraDenovo(seqtab, method="consensus", multithread=nthreads, verbose=TRUE)
+seqtab.nochim = removeBimeraDenovo(seqtab, method=dada2_chimera_method, minFoldParentOverAbundance=dada2_chimera_min_fold_parent_over_abundance, multithread=nthreads, verbose=TRUE)
 n_OTU_after_removing_chimeras = dim(seqtab.nochim)[2]
 print(dim(seqtab.nochim))
 asv.table = t(seqtab.nochim)
@@ -103,19 +107,19 @@ write.table(track, file = "summary_table.tsv", sep="\t")
 
 save(seqtab, seqtab.nochim, r1_error, r2_error, track, file = "result.RData")
 
-# prevalance sanity check
-pdf('dada2_figures.pdf')
-temp = prop.table(asv.table, 2)
-print(temp)
-hist(log10(temp), 100, main='abundance')
-prev = rowMeans(asv.table!=0)
-hist(prev, 50, main='prevalence')
-mean.ab = rowMeans(log10(temp + 1e-05))
-hist(mean.ab, 50, main='log.abundance')
-print("Prevalence")
-print(summary(prev))
-print("Mean abundance")
-print(summary(mean.ab))
-plot(prev, mean.ab, main='prevalence vs abundance')
-plot(nchar(rownames(asv.table)), prev, main='ASV length vs prevalence')
-dev.off()
+## prevalance sanity check
+#pdf('dada2_figures.pdf')
+#temp = prop.table(asv.table, 2)
+#print(temp)
+#hist(log10(temp), 100, main='abundance')
+#prev = rowMeans(asv.table!=0)
+#hist(prev, 50, main='prevalence')
+#mean.ab = rowMeans(log10(temp + 1e-05))
+#hist(mean.ab, 50, main='log.abundance')
+#print("Prevalence")
+#print(summary(prev))
+#print("Mean abundance")
+#print(summary(mean.ab))
+#plot(prev, mean.ab, main='prevalence vs abundance')
+#plot(nchar(rownames(asv.table)), prev, main='ASV length vs prevalence')
+#dev.off()

@@ -2,6 +2,11 @@
 
 nextflow.enable.dsl = 2
 
+include { qc_bbduk } from "./modules/nevermore/qc/bbduk"
+include { fastqc } from "./modules/nevermore/qc/fastqc"
+include { classify_sample } from "./modules/nevermore/functions"
+include { mapseq; mapseq_otutable } from "./modules/profilers/mapseq"
+
 
 //def helpMessage() {
 //	log.info """
@@ -37,36 +42,7 @@ nextflow.enable.dsl = 2
 //	helpMessage()
 //	exit 0
 //}
-//
-if ( !params.min_overlap ) {
-	params.min_overlap = 20
-}
 
-if ( !params.left_primer ) {
-	params.left_primer = 0
-}
-
-if ( !params.right_primer ) {
-	params.right_primer = 0
-}
-
-
-process ltrim {
-	publishDir "${params.output_dir}", mode: params.publish_mode
-
-	input:
-	path input_reads
-
-	output:
-	path("ltrim/*.{fastq,fq,fastq.gz,fq.gz}"), emit: ltrimmed_reads
-
-	script:
-	"""
-	mkdir -p ltrim/
-	python ${projectDir}/scripts/ltrim.py . ltrim/
-	"""
-
-}
 
 process figaro {
 	publishDir "${params.output_dir}", mode: params.publish_mode
@@ -81,28 +57,29 @@ process figaro {
 
 	script:
 	def paired_params = (is_paired_end == true) ? "-r ${params.right_primer} -m ${params.min_overlap}" : ""
+
 	"""
 	figaro -i . -o figaro/ -a ${params.amplicon_length} -f ${params.left_primer} ${paired_params}
 	"""
-	//  -r ${params.right_primer} -m ${params.min_overlap}
 }
+
 
 process extract_trim_parameters {
 	input:
 	path(trim_params)
 
 	output:
-	//tuple val(left), val(right), emit: trim_params
 	path("trim_params.txt"), emit: trim_params
 
 	script:
 	"""
 	python $projectDir/scripts/trim_params.py $trim_params > trim_params.txt
 	"""
-
 }
 
+
 process dada2_preprocess {
+	label 'dada2'
 	publishDir "${params.output_dir}", mode: params.publish_mode
 
 	input:
@@ -130,6 +107,7 @@ process dada2_preprocess {
 
 
 process dada2_analysis {
+	label 'dada2'
 	publishDir "${params.output_dir}", mode: params.publish_mode
 
 	input:
@@ -143,8 +121,8 @@ process dada2_analysis {
 	path("error_model.pdf")
 	path("summary_table.tsv")
 	path("result.RData")
-	path("dada2_figures.pdf")
-	path("ASVs.tsv")
+	path("dada2_figures.pdf"), optional: true
+	path("ASVs.tsv"), emit: asv_sequences
 	path("asv_table.tsv")
 
 	script:
@@ -152,8 +130,142 @@ process dada2_analysis {
 	mkdir -p dada2_in/
 	for f in \$(find . -maxdepth 1 -type l); do ln -s ../\$f dada2_in/; done
 	rm dada2_in/*.R dada2_in/filter_trim_table.final.tsv
-	Rscript --vanilla ${dada2_script} dada2_in/ dada2_analysis/ filter_trim_table.final.tsv $task.cpus > dada2_analysis.log
+	Rscript --vanilla ${dada2_script} dada2_in/ dada2_analysis/ filter_trim_table.final.tsv $task.cpus ${params.dada2_chimera_method} ${params.dada2_chimera_min_fold_parent_over_abundance} > dada2_analysis.log
 	"""
+}
+
+process asv2fasta {
+	publishDir "${params.output_dir}", mode: params.publish_mode
+
+	input:
+	path(asv_seqs)
+
+	output:
+	tuple val(meta), path("ASVs.fasta"), emit: asv_fasta
+
+	script:
+	meta = [:]
+	meta.id = "all"
+	meta.is_paired = false
+	"""
+	tail -n +2 ${asv_seqs} | sed 's/^/>/' | tr '\t' '\n' > ASVs.fasta
+	"""
+
+}
+
+process assess_read_length_distribution {
+	input:
+	path(fastq_reports)
+
+	output:
+	path("read_length_thresholds.txt"), emit: read_length
+	path("READSET_HOMOGENEOUS"), emit: hom_reads_marker, optional: true
+
+	script:
+	"""
+	python ${projectDir}/scripts/assess_readlengths.py . > read_length_thresholds.txt
+	"""
+}
+
+
+process homogenise_readlengths {
+	label 'bbduk'
+
+	input:
+	tuple val(sample), path(reads)
+	path(read_lengths)
+
+	output:
+	path("${sample.id}/*.{fastq,fq,fastq.gz,fq.gz}"), emit: reads
+
+	script:
+	def maxmem = task.memory.toString().replace(/ GB/, "g")
+
+	if (sample.is_paired) {
+		"""
+		mkdir -p ${sample.id}
+		r1len=\$(head -n 1 ${read_lengths} | cut -f 1)
+		r2len=\$(head -n 1 ${read_lengths} | cut -f 4)
+		bbduk.sh -Xmx${maxmem} t=${task.cpus} ordered=t minlength=\$((r1len-1)) ftr=\$((r1len-1)) stats=${sample.id}/${sample.id}.homr_stats_1.txt in=${sample.id}_R1.fastq.gz out=${sample.id}/${sample.id}_R1.fastq.gz
+		bbduk.sh -Xmx${maxmem} t=${task.cpus} ordered=t minlength=\$((r2len-1)) ftr=\$((r2len-1)) stats=${sample.id}/${sample.id}.homr_stats_2.txt in=${sample.id}_R2.fastq.gz out=${sample.id}/${sample.id}_R2.fastq.gz
+		"""
+	} else {
+		"""
+		mkdir -p ${sample.id}
+		r1len=\$(head -n 1 ${read_lengths} | cut -f 1)
+		bbduk.sh -Xmx${maxmem} t=${task.cpus} ordered=t minlength=\$((r1len-1)) ftr=\$((r1len-1)) stats=${sample.id}/${sample.id}.homr_stats_1.txt in=${sample.id}_R1.fastq.gz out=${sample.id}/${sample.id}_R1.fastq.gz
+		"""
+	}
+}
+
+
+workflow raw_reads_figaro {
+
+	take:
+		reads
+		run_figaro
+
+	main:
+		qc_bbduk(reads, "${projectDir}/assets/adapters.fa", run_figaro)
+
+		fastqc(qc_bbduk.out.reads)
+		fastqc_ch = fastqc.out.reports
+			.map { sample, report -> return report }
+			.collect()
+
+		assess_read_length_distribution(fastqc_ch)
+		homogenise_readlengths(qc_bbduk.out.reads, assess_read_length_distribution.out.read_length)
+
+		hom_reads = homogenise_readlengths.out.reads.collect()
+		figaro(hom_reads, !params.single_end)
+		extract_trim_parameters(figaro.out.trim_params)
+
+	emit:
+		reads = hom_reads
+		trim_params = extract_trim_parameters.out.trim_params
+
+}
+
+
+workflow check_for_preprocessing {
+	take:
+		reads
+
+	main:
+		reads.view()
+		fastqc(reads)
+		assess_read_length_distribution(
+			fastqc.out.reports
+				.map { sample, report -> return report }
+				.collect()
+		)
+
+	emit:
+		readlen_dist = assess_read_length_distribution.out.read_length
+		hom_reads_marker = assess_read_length_distribution.out.hom_reads_marker
+}
+
+
+process prepare_fastqs {
+	input:
+	tuple val(sample), path(fq)
+
+	output:
+	tuple val(sample), path("fastq/${sample.id}/${sample.id}_R*.fastq.gz"), emit: reads
+
+	script:
+	if (sample.is_paired) {
+		"""
+		mkdir -p fastq/${sample.id}
+		ln -sf ../../${fq[0]} fastq/${sample.id}/${sample.id}_R1.fastq.gz
+		ln -sf ../../${fq[1]} fastq/${sample.id}/${sample.id}_R2.fastq.gz
+		"""
+	} else {
+		"""
+		mkdir -p fastq/${sample.id}
+		ln -sf ../../${fq[0]} fastq/${sample.id}/${sample.id}_R1.fastq.gz
+		"""
+	}
 }
 
 
@@ -166,34 +278,57 @@ workflow {
 			return tuple(sample, file)
 		}
 		.groupTuple(sort: true)
+		.map { classify_sample(it[0], it[1]) }
 
-	if (!params.single_end) {
-		library_layout = "PAIRED";
-		dada2_preprocess_script = "$projectDir/R_scripts/dada2_preprocess_paired.R"
-		dada2_analysis_script = "$projectDir/R_scripts/dada2_analysis_paired.R"
-		is_paired_end = true
-	} else {
+	prepare_fastqs(fastq_ch)
+
+	if (params.single_end) {
 		library_layout = "SINGLE";
 		dada2_preprocess_script = "$projectDir/R_scripts/dada2_preprocess_single.R"
 		dada2_analysis_script = "$projectDir/R_scripts/dada2_analysis_single.R"
 		is_paired_end = false
+	} else {
+		library_layout = "PAIRED";
+		dada2_preprocess_script = "$projectDir/R_scripts/dada2_preprocess_paired.R"
+		dada2_analysis_script = "$projectDir/R_scripts/dada2_analysis_paired.R"
+		is_paired_end = true
 	}
 
 	print library_layout
 
-	fastq_ch.collect().view()
+	trim_params_ch = Channel.empty()
+	dada_reads_ch = Channel.empty()
 
-	files_only_ch = fastq_ch
-		.map { sample, files -> return files }
-		.collect()
+	if (!params.preprocessed) {
 
-	files_only_ch.view()
+		/* check if dataset was preprocessed */
 
-	ltrim(files_only_ch)
+		check_for_preprocessing(prepare_fastqs.out.reads)
 
-	figaro(ltrim.out.ltrimmed_reads, is_paired_end)
-	extract_trim_parameters(figaro.out.trim_params)
+		raw_reads_figaro(prepare_fastqs.out.reads, check_for_preprocessing.out.hom_reads_marker)
+		trim_params_ch = trim_params_ch
+			.concat(raw_reads_figaro.out.trim_params)
 
-	dada2_preprocess(ltrim.out.ltrimmed_reads, extract_trim_parameters.out.trim_params, dada2_preprocess_script, is_paired_end)
+		dada_reads_ch = dada_reads_ch.concat(raw_reads_figaro.out.reads)
+
+	}
+
+	trim_params = file("${workDir}/trim_params.txt")
+	trim_params.text = "-1 -1\n"
+
+	trim_params_ch = trim_params_ch
+		.concat(Channel.fromPath("${workDir}/trim_params.txt"))
+
+	dada_reads_ch = dada_reads_ch.concat(
+		prepare_fastqs.out.reads
+			.map { sample, reads -> reads }
+			.collect()
+	)
+
+	dada2_preprocess(dada_reads_ch.first(), trim_params_ch.first(), dada2_preprocess_script, is_paired_end)
 	dada2_analysis(dada2_preprocess.out.filtered_reads, dada2_preprocess.out.trim_table, dada2_analysis_script, is_paired_end)
+	asv2fasta(dada2_analysis.out.asv_sequences)
+
+	mapseq(asv2fasta.out.asv_fasta, params.mapseq_db_path, params.mapseq_db_name)
+	mapseq_otutable(mapseq.out.bac_ssu)
 }

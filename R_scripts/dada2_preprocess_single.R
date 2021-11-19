@@ -55,7 +55,7 @@ keep = file.exists(r1_filtered) & out[,"reads.out"] >= MIN_READ_THRESHOLD
 r1_remove = r1_filtered[!keep] #file.exists(r1_filtered) & out["reads.out"] < MIN_READ_THRESHOLD]
 sapply(r1_remove, file.remove)
 
-out = out[keep,]
+out = out[keep,,drop=FALSE]
 write.table(out, file="filter_trim_table.final.tsv", sep="\t")
 
 r1_filtered = r1_filtered[keep]
