@@ -2,7 +2,7 @@
 
 nextflow.enable.dsl = 2
 
-include { qc_bbduk } from "./modules/nevermore/qc/bbduk"
+include { qc_bbduk_amplicon } from "./modules/nevermore/qc/bbduk"
 include { fastqc } from "./modules/nevermore/qc/fastqc"
 include { classify_sample } from "./modules/nevermore/functions"
 include { mapseq; mapseq_otutable } from "./modules/profilers/mapseq"
@@ -163,7 +163,7 @@ process assess_read_length_distribution {
 
 	script:
 	"""
-	python ${projectDir}/scripts/assess_readlengths.py . > read_length_thresholds.txt
+	python ${projectDir}/scripts/assess_readlengths.py --amplicon_length ${params.amplicon_length} --min_overlap ${params.min_overlap} . > read_length_thresholds.txt
 	"""
 }
 
@@ -186,14 +186,20 @@ process homogenise_readlengths {
 		mkdir -p ${sample.id}
 		r1len=\$(head -n 1 ${read_lengths} | cut -f 1)
 		r2len=\$(head -n 1 ${read_lengths} | cut -f 4)
-		bbduk.sh -Xmx${maxmem} t=${task.cpus} ordered=t minlength=\$((r1len-1)) ftr=\$((r1len-1)) stats=${sample.id}/${sample.id}.homr_stats_1.txt in=${sample.id}_R1.fastq.gz out=${sample.id}/${sample.id}_R1.fastq.gz
-		bbduk.sh -Xmx${maxmem} t=${task.cpus} ordered=t minlength=\$((r2len-1)) ftr=\$((r2len-1)) stats=${sample.id}/${sample.id}.homr_stats_2.txt in=${sample.id}_R2.fastq.gz out=${sample.id}/${sample.id}_R2.fastq.gz
+		bbduk.sh -Xmx${maxmem} t=${task.cpus} ordered=t trd=t minlength=\$r1len ftr=\$((r1len-1)) stats=${sample.id}/${sample.id}.homr_stats_1.txt in=${sample.id}_R1.fastq.gz out=left.fastq.gz
+		bbduk.sh -Xmx${maxmem} t=${task.cpus} ordered=t trd=t minlength=\$r2len ftr=\$((r2len-1)) stats=${sample.id}/${sample.id}.homr_stats_2.txt in=${sample.id}_R2.fastq.gz out=right.fastq.gz
+		gzip -dc left.fastq.gz | awk 'NR%4==1' | sed 's/^@//' | sed 's/\\/1//' | sort > left.txt
+		gzip -dc right.fastq.gz | awk 'NR%4==1' | sed 's/^@//' | sed 's/\\/2//' | sort > right.txt
+		join -1 1 -2 1 left.txt right.txt > both.txt
+		seqtk subseq left.fastq.gz both.txt | gzip -c - > ${sample.id}/${sample.id}_R1.fastq.gz
+		seqtk subseq right.fastq.gz both.txt | gzip -c - > ${sample.id}/${sample.id}_R2.fastq.gz
+		rm left.* right.* both.txt
 		"""
 	} else {
 		"""
 		mkdir -p ${sample.id}
 		r1len=\$(head -n 1 ${read_lengths} | cut -f 1)
-		bbduk.sh -Xmx${maxmem} t=${task.cpus} ordered=t minlength=\$((r1len-1)) ftr=\$((r1len-1)) stats=${sample.id}/${sample.id}.homr_stats_1.txt in=${sample.id}_R1.fastq.gz out=${sample.id}/${sample.id}_R1.fastq.gz
+		bbduk.sh -Xmx${maxmem} t=${task.cpus} ordered=t minlength=\$r1len ftr=\$((r1len-1)) stats=${sample.id}/${sample.id}.homr_stats_1.txt in=${sample.id}_R1.fastq.gz out=${sample.id}/${sample.id}_R1.fastq.gz
 		"""
 	}
 }
@@ -203,18 +209,17 @@ workflow raw_reads_figaro {
 
 	take:
 		reads
-		run_figaro
 
 	main:
-		qc_bbduk(reads, "${projectDir}/assets/adapters.fa", run_figaro)
+		qc_bbduk_amplicon(reads, "${projectDir}/assets/adapters.fa")
 
-		fastqc(qc_bbduk.out.reads)
+		fastqc(qc_bbduk_amplicon.out.reads)
 		fastqc_ch = fastqc.out.reports
 			.map { sample, report -> return report }
 			.collect()
 
 		assess_read_length_distribution(fastqc_ch)
-		homogenise_readlengths(qc_bbduk.out.reads, assess_read_length_distribution.out.read_length)
+		homogenise_readlengths(qc_bbduk_amplicon.out.reads, assess_read_length_distribution.out.read_length)
 
 		hom_reads = homogenise_readlengths.out.reads.collect()
 		figaro(hom_reads, !params.single_end)
@@ -301,11 +306,7 @@ workflow {
 
 	if (!params.preprocessed) {
 
-		/* check if dataset was preprocessed */
-
-		check_for_preprocessing(prepare_fastqs.out.reads)
-
-		raw_reads_figaro(prepare_fastqs.out.reads, check_for_preprocessing.out.hom_reads_marker)
+		raw_reads_figaro(prepare_fastqs.out.reads)
 		trim_params_ch = trim_params_ch
 			.concat(raw_reads_figaro.out.trim_params)
 
