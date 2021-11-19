@@ -4,7 +4,7 @@ process qc_bbduk_amplicon {
 
     input:
     tuple val(sample), path(reads)
-	path(adapters)
+	  path(adapters)
 
     output:
     tuple val(sample), path("${sample.id}/${sample.id}_R*.fastq.gz"), emit: reads
@@ -33,7 +33,6 @@ process qc_bbduk_amplicon {
 
     """
     mkdir -p ${sample.id}
-
     bbduk.sh -Xmx${maxmem} t=${task.cpus} ordered=t ${params.p5_primer_params} ${trim_params} stats=${sample.id}/${sample.id}.fwd_bbduk_stats.txt ${read1_p5} ${read2_p5}
     bbduk.sh -Xmx${maxmem} t=${task.cpus} ordered=t ${params.p3_primer_params} ${trim_params} stats=${sample.id}/${sample.id}.rev_bbduk_stats.txt ${read1_p3} ${read2_p3}
     """

@@ -53,15 +53,6 @@ def main():
 		smaller = min(len(r1_lengths), len(r2_lengths))
 		all_lengths = [x + y for x, y in zip(r1_lengths[:smaller], r2_lengths[:smaller])]
 
-
-		#if len(r1_lengths) < len(r2_lengths):
-		#	# r1_lengths.extend(("NA", "NA", "NA") for i in range(len(r2_lengths) - len(r1_lengths)))
-		#	r2_lengths = r2_lengths[:len(r1_lengths)]
-		#elif len(r2_lengths) < len(r1_lengths):
-		#	# r2_lengths.extend(("NA", "NA", "NA") for i in range(len(r1_lengths) - len(r2_lengths)))
-		#	r1_lengths = r1_lengths[:len(r2_lengths)]
-		#all_lengths = [x + y for x, y in zip(r1_lengths, r2_lengths)]
-
 	for item in all_lengths:
 		if len(item) == 3 or item[0] + item[3] > minlength:
 			print(*item, sep="\t")
