@@ -22,7 +22,11 @@ def main():
 
 	ap = argparse.ArgumentParser()
 	ap.add_argument("input_dir", type=str, default=".")
+	ap.add_argument("--amplicon_length", type=int, required=True)
+	ap.add_argument("--min_overlap", type=int, required=True)
 	args = ap.parse_args()
+
+	minlength = args.amplicon_length + args.min_overlap
 
 	read_yields = {}
 	for r in (1, 2):
@@ -45,15 +49,22 @@ def main():
 		all_lengths = r1_lengths
 		is_hom = len(r1_lengths) == 1
 	else:
-		if len(r1_lengths) < len(r2_lengths):
-			r1_lengths.extend(("NA", "NA", "NA") for i in range(len(r2_lengths) - len(r1_lengths)))
-		elif len(r2_lengths) < len(r1_lengths):
-			r2_lengths.extend(("NA", "NA", "NA") for i in range(len(r1_lengths) - len(r2_lengths)))
-		all_lengths = [x + y for x, y in zip(r1_lengths, r2_lengths)]
 		is_hom = len(r1_lengths) == len(r2_lengths) == 1
+		smaller = min(len(r1_lengths), len(r2_lengths))
+		all_lengths = [x + y for x, y in zip(r1_lengths[:smaller], r2_lengths[:smaller])]
+
+
+		#if len(r1_lengths) < len(r2_lengths):
+		#	# r1_lengths.extend(("NA", "NA", "NA") for i in range(len(r2_lengths) - len(r1_lengths)))
+		#	r2_lengths = r2_lengths[:len(r1_lengths)]
+		#elif len(r2_lengths) < len(r1_lengths):
+		#	# r2_lengths.extend(("NA", "NA", "NA") for i in range(len(r1_lengths) - len(r2_lengths)))
+		#	r1_lengths = r1_lengths[:len(r2_lengths)]
+		#all_lengths = [x + y for x, y in zip(r1_lengths, r2_lengths)]
 
 	for item in all_lengths:
-		print(*item, sep="\t")
+		if len(item) == 3 or item[0] + item[3] > minlength:
+			print(*item, sep="\t")
 
 	if is_hom:
 		open("READSET_HOMOGENEOUS", "wt").close()
