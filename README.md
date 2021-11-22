@@ -18,10 +18,14 @@ For convenience, `gaga2` comes with a Singularity container with all dependencie
 ```singularity pull oras://ghcr.io/zellerlab/gaga2:latest```
 
 #### MapSeq
-While most dependencies can be installed via conda, `MapSeq` can not. If you don't want / can't use the `gaga2` singularity container, you need to make `gaga2` aware of your own MapSeq installation. In this case (and only in this case!), please modify the following entries in the `run.config`:
+While most dependencies can be installed via conda, `MapSeq` can not. If you don't want / can't use the `gaga2` singularity container, you need to make `gaga2` aware of your own MapSeq installation. In this case, please modify the following entries in the `run.config`:
 * `mapseq_bin` should be the path to your `mapseq` binary; if `mapseq` is in your `$PATH`, you can leave this entry unchanged.
 * `mapseq_db_path` is the `dirname` of the path to your `mapseq` database, i.e. for `/path/to/mapseq_db_folder/` it is `/path/to/`.
 * `mapseq_db_name` is the `basename` of the path to your `mapseq` database, i.e. for `/path/to/mapseq_db_folder/` it is `mapseq_db_folder`.
+
+#### Custom MapSeq databases.
+
+If you use the MapSeq as provided by the gaga2 container, you can modify the `mapseq_db_path` and `mapseq_db_name` parameters to point at a custom database. This custom database will be used in addition to MapSeq's own database and is currently limited to a single taxonomy. Please note, that the database files need to be named `<mapseq_db_name>.fasta` and `<mapseq_db_name>.tax`.
 
 
 ## Usage instructions

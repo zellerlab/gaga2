@@ -310,5 +310,5 @@ workflow {
 	asv2fasta(dada2_analysis.out.asv_sequences)
 
 	mapseq(asv2fasta.out.asv_fasta, params.mapseq_db_path, params.mapseq_db_name)
-	mapseq_otutable(mapseq.out.bac_ssu)
+	// mapseq_otutable(mapseq.out.bac_ssu)
 }
