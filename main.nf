@@ -2,7 +2,7 @@
 
 nextflow.enable.dsl = 2
 
-include { qc_bbduk_amplicon } from "./modules/nevermore/qc/bbduk"
+include { qc_bbduk_stepwise_amplicon } from "./modules/nevermore/qc/bbduk"
 include { fastqc } from "./modules/nevermore/qc/fastqc"
 include { classify_sample } from "./modules/nevermore/functions"
 include { mapseq; mapseq_otutable } from "./modules/profilers/mapseq"
@@ -48,8 +48,9 @@ process figaro {
 	publishDir "${params.output_dir}", mode: params.publish_mode
 
 	input:
-	path input_reads
-	val is_paired_end
+	path(input_reads)
+	val(is_paired_end)
+	val(read_lengths)
 
 	output:
 	path("figaro/trimParameters.json"), emit: trim_params
@@ -58,9 +59,20 @@ process figaro {
 	script:
 	def paired_params = (is_paired_end == true) ? "-r ${params.right_primer} -m ${params.min_overlap}" : ""
 
-	"""
-	figaro -i . -o figaro/ -a ${params.amplicon_length} -f ${params.left_primer} ${paired_params}
-	"""
+	if (params.single_end) {
+		"""
+		figaro -i . -o figaro/ -a ${params.amplicon_length} -f ${params.left_primer}
+		"""
+	} else {
+		amplen = read_lengths[0].toInteger() + read_lengths[1].toInteger() - params.min_overlap.toInteger() - 1
+		if (amplen >= params.amplicon_length.toInteger()) {
+			amplen = params.amplicon_length.toInteger()
+		}
+		println 'Amplicon length', amplen, params.amplicon_length
+		"""
+		figaro -i . -o figaro/ -a ${amplen} -f ${params.left_primer} -r ${params.right_primer} -m ${params.min_overlap}
+		"""
+	}
 }
 
 
@@ -172,7 +184,6 @@ process asv2fasta {
 	"""
 	tail -n +2 ${asv_seqs} | sed 's/^/>/' | tr '\t' '\n' > ASVs.fasta
 	"""
-
 }
 
 process assess_read_length_distribution {
@@ -188,7 +199,6 @@ process assess_read_length_distribution {
 	python ${projectDir}/scripts/assess_readlengths.py --amplicon_length ${params.amplicon_length} --min_overlap ${params.min_overlap} . > read_length_thresholds.txt
 	"""
 }
-
 
 process homogenise_readlengths {
 	label 'bbduk'
@@ -233,18 +243,22 @@ workflow raw_reads_figaro {
 		reads
 
 	main:
-		qc_bbduk_amplicon(reads, "${projectDir}/assets/adapters.fa")
+		qc_bbduk_stepwise_amplicon(reads, "${projectDir}/assets/adapters.fa")
 
-		fastqc(qc_bbduk_amplicon.out.reads)
-		fastqc_ch = fastqc.out.reports
-			.map { sample, report -> return report }
-			.collect()
+		fastqc(qc_bbduk_stepwise_amplicon.out.reads)
 
-		assess_read_length_distribution(fastqc_ch)
-		homogenise_readlengths(qc_bbduk_amplicon.out.reads, assess_read_length_distribution.out.read_length)
+		read_lengths_ch = qc_bbduk_stepwise_amplicon.out.read_lengths.collect()
+		assess_read_length_distribution(read_lengths_ch)
+		homogenise_readlengths(qc_bbduk_stepwise_amplicon.out.reads, assess_read_length_distribution.out.read_length)
+
+		read_lengths_figaro_input_ch = assess_read_length_distribution.out.read_length
+			.splitCsv(header: false, sep: '\t')
+			.first()
+			.map { values -> (params.single_end) ? tuple(values[0], null) : tuple(values[0], values[3]) }
+			.view()
 
 		hom_reads = homogenise_readlengths.out.reads.collect()
-		figaro(hom_reads, !params.single_end)
+		figaro(hom_reads, !params.single_end, read_lengths_figaro_input_ch)
 		extract_trim_parameters(figaro.out.trim_params)
 
 	emit:
@@ -262,7 +276,13 @@ workflow {
 			return tuple(sample, file)
 		}
 		.groupTuple(sort: true)
-		.map { classify_sample(it[0], it[1]) }
+		.map { sample, files ->
+			def meta = [:]
+		    meta.is_paired = (files instanceof Collection && files.size() == 2)
+		    meta.id = sample
+
+		    return tuple(meta, files)
+		}
 
 	prepare_fastqs(fastq_ch)
 
@@ -289,26 +309,27 @@ workflow {
 		trim_params_ch = trim_params_ch
 			.concat(raw_reads_figaro.out.trim_params)
 
-		dada_reads_ch = dada_reads_ch.concat(raw_reads_figaro.out.reads)
+		dada_reads_ch = dada_reads_ch.concat(raw_reads_figaro.out.reads).collect()
+
+	} else {
+
+		trim_params = file("${workDir}/trim_params.txt")
+		trim_params.text = "-1 -1\n"
+
+		trim_params_ch = trim_params_ch
+			.concat(Channel.fromPath("${workDir}/trim_params.txt"))
+
+		dada_reads_ch = dada_reads_ch.concat(
+			prepare_fastqs.out.reads
+				.map { sample, reads -> reads }
+				.collect()
+		)
 
 	}
 
-	trim_params = file("${workDir}/trim_params.txt")
-	trim_params.text = "-1 -1\n"
-
-	trim_params_ch = trim_params_ch
-		.concat(Channel.fromPath("${workDir}/trim_params.txt"))
-
-	dada_reads_ch = dada_reads_ch.concat(
-		prepare_fastqs.out.reads
-			.map { sample, reads -> reads }
-			.collect()
-	)
-
-	dada2_preprocess(dada_reads_ch.first(), trim_params_ch.first(), dada2_preprocess_script, is_paired_end)
+	dada2_preprocess(dada_reads_ch, trim_params_ch, dada2_preprocess_script, is_paired_end)
 	dada2_analysis(dada2_preprocess.out.filtered_reads, dada2_preprocess.out.trim_table, dada2_analysis_script, is_paired_end)
 	asv2fasta(dada2_analysis.out.asv_sequences)
 
 	mapseq(asv2fasta.out.asv_fasta, params.mapseq_db_path, params.mapseq_db_name)
-	// mapseq_otutable(mapseq.out.bac_ssu)
 }
