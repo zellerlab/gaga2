@@ -1,4 +1,6 @@
 process mapseq {
+    publishDir params.output_dir, mode: params.publish_mode
+
     input:
     tuple val(sample), path(seqs)
 	path(db_path)
@@ -10,9 +12,13 @@ process mapseq {
     script:
 	def db = (db_name == "default" || db_name == "") ? "" : "${db_path}/${db_name}.fasta ${db_path}/*.tax*"
 
+	db_run = (db != "") ? "${params.mapseq_bin} -outfmt simple ${seqs} ${db} > ${sample.id}/${sample.id}.${db_name}_bac_ssu.mseq" : ""
+
 	"""
 	mkdir -p ${sample.id}
-    ${params.mapseq_bin} ${seqs} > ${sample.id}/${sample.id}_bac_ssu.mseq
+    ${params.mapseq_bin} -outfmt simple ${seqs} > ${sample.id}/${sample.id}_bac_ssu.mseq
+
+	${db_run}
     """
 }
 
