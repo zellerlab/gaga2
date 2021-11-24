@@ -85,6 +85,7 @@ Additional arguments can be set via the command line (e.g. `--input_dir /path/to
 * `--min_overlap` of read pairs is `20bp` by default
 * `--primers <comma-separated-list-of-primer-sequences>` or `--left_primer`, and `--right_primer` If primer sequences are provided via `--primers`, `gaga2` will remove primers and upstream sequences (using `bbduk`), such as adapters based on the primer sequences. If non-zero primer lengths are provided instead (via `--left_primer` and `--right_primer`), `figaro` will take those into account when determining the best trim positions.
 * `--preprocessed` will prevent any further preprocessing by `gaga2` - this flag should only be used if the read data is reliably clean.
+* `--long_reads` should be only set if individual reads (i.e., forward and/or reverse) are known to be of equal length or longer than the amplicon. This will trigger primer/adapter removal (if enabled) on the 3'-ends in order to get rid of readthroughs.
 * `--qc_minlen` sets the minimum length for reads to be retained after preprocessing.
 * `--dada2_chimera_method` sets the method with which `dada2` will remove chimeras (default: `"consensus"`, alternative: `"pool"`)
 * `--dada2_chimera_min_fold_parent_over_abundance` sets the `minFoldParentOverAbundance` parameter for `removeBimeraDeNovo` (default: `2`)
