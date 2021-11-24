@@ -18,6 +18,14 @@ def parse_fastqc_report(f):
 	return dict(item for item in readlengths if item[1] > 0)
 
 
+def parse_bbduk_hist(f):
+	return {
+		int(line.strip().split("\t")[0]): int(line.strip().split("\t")[1])
+		for line in open(f)
+		if line[0] != "#"
+	}
+
+
 def main():
 
 	ap = argparse.ArgumentParser()
@@ -26,13 +34,16 @@ def main():
 	ap.add_argument("--min_overlap", type=int, required=True)
 	args = ap.parse_args()
 
-	minlength = args.amplicon_length + args.min_overlap
+	minlength = 0.5 * args.amplicon_length + args.min_overlap
+	# minlength = 0
 
 	read_yields = {}
-	for r in (1, 2):
+	for mate in (1, 2):
 		read_lengths = Counter()
-		for fastq_report in glob.glob(os.path.join(args.input_dir, f"*{r}_fastqc_data.txt")):
-			read_lengths.update(parse_fastqc_report(fastq_report))
+		#for fastq_report in glob.glob(os.path.join(args.input_dir, f"*{mate}_fastqc_data.txt")):
+		#	read_lengths.update(parse_fastqc_report(fastq_report))
+		for hist in glob.glob(os.path.join(args.input_dir, f"*R{mate}.post_lhist.txt")):
+			read_lengths.update(parse_bbduk_hist(hist))
 
 		yields = list()
 		for length, count in read_lengths.items():
@@ -40,7 +51,7 @@ def main():
 				(length, sum(v for k, v in read_lengths.items() if k >= length), sum(v * length for k, v in read_lengths.items() if k >= length))
 			)
 		for length, reads, bases in sorted(yields, key=lambda x:(x[2], x[1]), reverse=True):
-			read_yields.setdefault(r, list()).append((length, reads, bases))
+			read_yields.setdefault(mate, list()).append((length, reads, bases))
 
 	r1_lengths = read_yields.get(1, list())
 	r2_lengths = read_yields.get(2, list())
